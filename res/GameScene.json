@@ -1,0 +1,73 @@
+{
+  "ID": "0265212e-8f25-4d37-b2ad-87bed463d0d5",
+  "Version": "2.3.2.3",
+  "Name": "GameScene",
+  "Content": {
+    "Content": {
+      "Animation": {
+        "Duration": 0,
+        "Speed": 1.0,
+        "Timelines": [],
+        "ctype": "TimelineActionData"
+      },
+      "AnimationList": [],
+      "ObjectData": {
+        "Tag": 26,
+        "Children": [
+          {
+            "FileData": {
+              "Type": "Normal",
+              "Path": "image/bg.png",
+              "Plist": ""
+            },
+            "BlendFunc": {
+              "Src": 770,
+              "Dst": 771
+            },
+            "AnchorPoint": {},
+            "Position": {
+              "X": -0.0011,
+              "Y": 0.0
+            },
+            "Scale": {
+              "ScaleX": 2.1079,
+              "ScaleY": 3.2335
+            },
+            "CColor": {},
+            "IconVisible": false,
+            "PrePosition": {
+              "X": 0.0,
+              "Y": 0.0
+            },
+            "PreSize": {
+              "X": 0.0,
+              "Y": 0.0
+            },
+            "LeftMargin": -0.0011,
+            "RightMargin": 320.0011,
+            "TopMargin": 480.0,
+            "Tag": 31,
+            "ActionTag": -1161101461,
+            "Size": {
+              "X": 320.0,
+              "Y": 480.0
+            },
+            "Name": "GameBg",
+            "ctype": "SpriteObjectData"
+          }
+        ],
+        "Size": {
+          "X": 640.0,
+          "Y": 960.0
+        },
+        "Name": "Scene",
+        "ctype": "SingleNodeObjectData"
+      },
+      "UsedResources": [
+        "image/bg.png"
+      ],
+      "ctype": "GameProjectData"
+    }
+  },
+  "Type": "Scene"
+}

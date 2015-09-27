@@ -1,0 +1,28 @@
+{
+    "project_type": "javascript",
+
+    "debugMode" : 1,
+    "showFPS" : true,
+    "frameRate" : 60,
+    "id" : "gameCanvas",
+    "renderMode" : 0,
+    "engineDir":"frameworks/cocos2d-html5",
+
+    "modules" : ["cocos2d", "cocostudio"],
+
+    "jsList" : [
+        "src/resource.js",
+        "src/base.js",
+        
+        "src/base/layer.js",
+        "src/base/bullet.js",
+        "src/base/robot.js",
+        "src/base/enemy.js",
+        "src/base/ship.js",
+        "src/base/robotFactor.js",
+        
+        "src/scene/start.js",
+        "src/scene/game.js",
+        "src/scene/end.js"
+    ]
+}

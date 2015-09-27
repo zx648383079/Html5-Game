@@ -1,0 +1,271 @@
+{
+  "ID": "b1d64fa0-caa5-4200-b351-8063aac573e2",
+  "Version": "2.3.2.3",
+  "Name": "TitleLayer",
+  "Content": {
+    "Content": {
+      "Animation": {
+        "Duration": 0,
+        "Speed": 1.0,
+        "Timelines": [],
+        "ctype": "TimelineActionData"
+      },
+      "AnimationList": [],
+      "ObjectData": {
+        "Children": [
+          {
+            "FontSize": 20,
+            "LabelText": "分数：",
+            "VerticalAlignmentType": "VT_Center",
+            "OutlineColor": {
+              "G": 0,
+              "B": 0
+            },
+            "ShadowColor": {
+              "R": 110,
+              "G": 110,
+              "B": 110
+            },
+            "ShadowOffsetX": 2.0,
+            "ShadowOffsetY": -2.0,
+            "AnchorPoint": {
+              "ScaleX": 0.5,
+              "ScaleY": 0.5
+            },
+            "Position": {
+              "X": 66.9999,
+              "Y": 269.9997
+            },
+            "Scale": {
+              "ScaleX": 1.3333,
+              "ScaleY": 0.95
+            },
+            "CColor": {},
+            "IconVisible": false,
+            "PrePosition": {
+              "X": 0.1047,
+              "Y": 0.9
+            },
+            "PreSize": {
+              "X": 0.0,
+              "Y": 0.0
+            },
+            "LeftMargin": 36.9999,
+            "RightMargin": 543.0001,
+            "TopMargin": 20.0003,
+            "BottomMargin": 259.9997,
+            "Tag": 3,
+            "ActionTag": 924324516,
+            "Size": {
+              "X": 60.0,
+              "Y": 20.0
+            },
+            "Name": "scoreLable",
+            "ctype": "TextObjectData"
+          },
+          {
+            "CharWidth": 14,
+            "CharHeight": 18,
+            "LabelText": "00",
+            "StartChar": ".",
+            "LabelAtlasFileImage_CNB": {
+              "Type": "Default",
+              "Path": "Default/TextAtlas.png",
+              "Plist": ""
+            },
+            "AnchorPoint": {
+              "ScaleX": 0.5,
+              "ScaleY": 0.4444
+            },
+            "Position": {
+              "X": 120.0001,
+              "Y": 269.0
+            },
+            "Scale": {
+              "ScaleX": 1.5,
+              "ScaleY": 1.1249
+            },
+            "CColor": {},
+            "IconVisible": false,
+            "PrePosition": {
+              "X": 0.1875,
+              "Y": 0.8967
+            },
+            "PreSize": {
+              "X": 0.0,
+              "Y": 0.0
+            },
+            "LeftMargin": 106.0001,
+            "RightMargin": 505.9999,
+            "TopMargin": 20.9992,
+            "BottomMargin": 261.0008,
+            "CallBackType": "Click",
+            "Tag": 4,
+            "ActionTag": -1594323088,
+            "Size": {
+              "X": 28.0,
+              "Y": 18.0
+            },
+            "Name": "score",
+            "ctype": "TextAtlasObjectData"
+          },
+          {
+            "FontSize": 20,
+            "LabelText": "生命值：",
+            "OutlineColor": {
+              "G": 0,
+              "B": 0
+            },
+            "ShadowColor": {
+              "R": 110,
+              "G": 110,
+              "B": 110
+            },
+            "ShadowOffsetX": 2.0,
+            "ShadowOffsetY": -2.0,
+            "AnchorPoint": {
+              "ScaleX": 0.5,
+              "ScaleY": 0.5
+            },
+            "Position": {
+              "X": 345.0,
+              "Y": 272.0
+            },
+            "Scale": {
+              "ScaleX": 1.0,
+              "ScaleY": 1.0
+            },
+            "CColor": {},
+            "IconVisible": false,
+            "PrePosition": {
+              "X": 0.5391,
+              "Y": 0.9067
+            },
+            "PreSize": {
+              "X": 0.0,
+              "Y": 0.0
+            },
+            "LeftMargin": 305.0,
+            "RightMargin": 255.0,
+            "TopMargin": 18.0,
+            "BottomMargin": 262.0,
+            "Tag": 5,
+            "ActionTag": 1651364088,
+            "Size": {
+              "X": 80.0,
+              "Y": 20.0
+            },
+            "Name": "lifeLabel",
+            "ctype": "TextObjectData"
+          },
+          {
+            "ProgressInfo": 100,
+            "ImageFileData": {
+              "Type": "Default",
+              "Path": "Default/LoadingBarFile.png",
+              "Plist": ""
+            },
+            "AnchorPoint": {
+              "ScaleX": 0.5,
+              "ScaleY": 0.5
+            },
+            "Position": {
+              "X": 490.0,
+              "Y": 272.0
+            },
+            "Scale": {
+              "ScaleX": 1.0,
+              "ScaleY": 1.0
+            },
+            "CColor": {},
+            "IconVisible": false,
+            "PrePosition": {
+              "X": 0.7656,
+              "Y": 0.9067
+            },
+            "PreSize": {
+              "X": 0.0,
+              "Y": 0.0
+            },
+            "LeftMargin": 390.0,
+            "RightMargin": 50.0,
+            "TopMargin": 21.0,
+            "BottomMargin": 265.0,
+            "Tag": 6,
+            "ActionTag": -1973681104,
+            "Size": {
+              "X": 200.0,
+              "Y": 14.0
+            },
+            "Name": "life",
+            "ctype": "LoadingBarObjectData"
+          },
+          {
+            "FontSize": 20,
+            "LabelText": "100",
+            "OutlineColor": {
+              "G": 0,
+              "B": 0
+            },
+            "ShadowColor": {
+              "R": 110,
+              "G": 110,
+              "B": 110
+            },
+            "ShadowOffsetX": 2.0,
+            "ShadowOffsetY": -2.0,
+            "AnchorPoint": {
+              "ScaleX": 0.5,
+              "ScaleY": 0.5
+            },
+            "Position": {
+              "X": 484.0,
+              "Y": 272.0
+            },
+            "Scale": {
+              "ScaleX": 1.0,
+              "ScaleY": 1.0
+            },
+            "CColor": {
+              "G": 0,
+              "B": 0
+            },
+            "IconVisible": false,
+            "PrePosition": {
+              "X": 0.7563,
+              "Y": 0.9067
+            },
+            "PreSize": {
+              "X": 0.0,
+              "Y": 0.0
+            },
+            "LeftMargin": 469.0,
+            "RightMargin": 141.0,
+            "TopMargin": 18.0,
+            "BottomMargin": 262.0,
+            "Tag": 12,
+            "ActionTag": -673085020,
+            "Size": {
+              "X": 30.0,
+              "Y": 20.0
+            },
+            "Name": "lifeText",
+            "ctype": "TextObjectData"
+          }
+        ],
+        "Size": {
+          "X": 640.0,
+          "Y": 300.0
+        },
+        "Name": "Layer",
+        "ctype": "LayerObjectData"
+      },
+      "UsedResources": [
+        "Default/LoadingBarFile.png",
+        "Default/TextAtlas.png"
+      ],
+      "ctype": "GameProjectData"
+    }
+  },
+  "Type": "Layer"
+}

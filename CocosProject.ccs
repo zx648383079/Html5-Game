@@ -1,0 +1,30 @@
+<Solution>
+  <PropertyGroup Name="CocosProject" Version="2.3.2.3" Type="CocosStudio" />
+  <SolutionFolder>
+    <Group ctype="ResourceGroup">
+      <RootFolder Name=".">
+        <Project Name="MainScene.csd" Type="Scene" />
+        <Image Name="HelloWorld.png" />
+        <Project Name="StartScene.csd" Type="Scene" />
+        <Project Name="PlayLayer.csd" Type="Layer" />
+        <Folder Name="image">
+          <Image Name="bg.jpg" />
+          <Image Name="downplay.png" />
+          <Image Name="noplay.png" />
+          <Image Name="play.png" />
+          <Image Name="bg.png" />
+          <Image Name="boss.png" />
+          <Image Name="bullet.png" />
+          <Image Name="enemy.png" />
+          <Image Name="live.png" />
+          <Image Name="lose.png" />
+          <Image Name="ship.png" />
+          <Image Name="win.png" />
+        </Folder>
+        <Project Name="GameScene.csd" Type="Scene" />
+        <Project Name="TitleLayer.csd" Type="Layer" />
+        <Project Name="EndScene.csd" Type="Scene" />
+      </RootFolder>
+    </Group>
+  </SolutionFolder>
+</Solution>
