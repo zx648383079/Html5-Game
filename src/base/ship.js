@@ -33,21 +33,19 @@ cc.ShipSprite = cc.RobotSprite.extend({
 		
 		if(this.dieCallback && typeof this.dieCallback == "function")
 		{
-			this.dieCallback(this._parent,this.life);				
+			this.dieCallback(this.life);				
 		}
 		
 		var die = false;
 		if(this.life <= 0)
 		{
-			this.loadingEnd();
+			this.end();
 			this.removeFromParent(true);
 			die = true;
 		}
 		return die;
 	},
-	loadingEnd: function() {
-		var scene = new EndScene();
-		scene.score = this._parent.score.getString();
-		cc.director.runScene(new cc.TransitionFade(1, scene));		
+	setEnd: function(callback) {
+		this.end = callback;
 	}
 });

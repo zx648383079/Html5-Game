@@ -14,6 +14,11 @@ var GameLayer = cc.BaseLayer.extend({
         this.addChild(gamescene.node);
         this.bg = gamescene.node.getChildByName('GameBg');
     },
+    loadingEnd: function() {
+		var scene = new EndScene();
+		scene.score = this.score.getString();
+		cc.director.runScene(new cc.TransitionFade(1, scene));		
+	},
     addTitleLayer: function() {
         var title = ccs.load(res.TitleLayer_json).node;
         title.setLocalZOrder(99);
@@ -25,15 +30,16 @@ var GameLayer = cc.BaseLayer.extend({
         this.addChild(title);
         this.score.setString(0);
     },
-    setLife: function( parent, value ) {
-        parent.life.setPercent(parseInt( value / parent.lifeCount * 100 ));
-        parent.lifeText.setString(value);
+    setLife: function( value ) {
+        this.life.setPercent(parseInt( value / this.lifeCount * 100 ));
+        this.lifeText.setString(value);
     },
     addShip: function() {
         this.ship = RobotSprite(GameRes.Ship, GameRes.Bullet, robotKind.SHIP);
-        this.ship.setDieCallback(this.setLife);
+        this.ship.setDieCallback(this.setLife.bind(this));
         this.lifeCount = this.ship.life;
-        this.setLife(this,this.lifeCount);
+        this.setLife(this.lifeCount);
+        this.ship.setEnd(this.loadingEnd.bind(this));
         this.addChild(this.ship);
     },
     beginGame: function() {
@@ -44,15 +50,15 @@ var GameLayer = cc.BaseLayer.extend({
         if(this.enemyCount < 10)
         {
             var enemy = RobotSprite(GameRes.Enemy);
-            enemy.setDieCallback(this.addScore);          
+            enemy.setDieCallback(this.addScore.bind(this));          
             this.addChild(enemy);
             this.enemyCount ++;
             console.log(this.enemyCount);
         }        
     },
-    addScore: function(self) {
-      self._parent.score.setString( Number(self._parent.score.getString()) + self.value ); 
-      console.log(self._parent.score.getString()); 
+    addScore: function(value) {
+      this.score.setString( Number(this.score.getString()) + value ); 
+      console.log(this.score.getString()); 
     },
     addKeyEvent: function() {
         cc.eventManager.addListener({    

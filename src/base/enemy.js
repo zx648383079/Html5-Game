@@ -39,7 +39,7 @@ cc.EnemySprite = cc.RobotSprite.extend({
 			this._parent.enemyCount --;		
 			if(suicide && this.dieCallback && typeof this.dieCallback == "function")
 			{
-			 	this.dieCallback(this);				
+			 	this.dieCallback(this.value);				
 			}
 			this.removeFromParent(true);
 			die = true;
