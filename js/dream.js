@@ -32,6 +32,13 @@ zodream.fn.prototype = {
 		this.assets = Array();
 		this.loadAsset();
 	},
+	loadSound: function() {
+		createjs.Sound.alternateExtensions = ["mp3"];
+		var preload = new createjs.LoadQueue(true);
+		preload.installPlugin(createjs.Sound);
+		preload.loadManifest();
+		createjs.Sound.play("id");
+	},
 	loadAsset: function() {
 		var preload = new createjs.LoadQueue(true);
 		preload.addEventListener("fileload", this.loadAssetComplete.bind(this));
@@ -48,7 +55,7 @@ zodream.fn.prototype = {
 	loadShip: function() {
 		this.ship = new createjs.Bitmap(this.assets[1]);
 		this.ship.x = 0;
-		this,ship.y = 0;
+		this.ship.y = 0;
 		this.stage.addChild(this.ship);			
 	},
 	loadText: function() {
@@ -62,12 +69,35 @@ zodream.fn.prototype = {
 			this.start();
 		}
 	},
+	addEvent: function() {
+		this.stage.on('mousedown', function (evt) {
+			this.ship.y -= 2;
+		}.bind(this));	
+	},
 	start: function() {
 		this.loadScence();
+		this.loadShip();
+		this.addEvent();
+		console.log(this.stage);
 		createjs.Ticker.timingMode = createjs.Ticker.RAF_SYNCHED; //createjs.Ticker.RAF
 		createjs.Ticker.setFPS(60);
 		createjs.Ticker.addEventListener('tick', this.update.bind(this));
 		//createjs.Tween.get(target).wait(500).to({alpha:0, visible:false}, 1000).call(handleComplete);	
+	},
+	move: function() {
+		for (var i = 0, len = arguments.length; i < len; i++) {
+			var arg = arguments[i];
+			if(arg.power.x > 0)
+			{
+				arg.x -= arg.speed.x;
+				arg.power.x -= arg.speed.x;
+			}
+			if(arg.power.y > 0)
+			{
+				arg.y -= arg.speed.y;
+				arg.power.y -= arg.speed.y;
+			}
+		};
 	},
 	extend: function( obj ) {
 		for (var i = 1, len = arguments.length; i < len; i++) {
