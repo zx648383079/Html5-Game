@@ -9,41 +9,18 @@ zodream.fn = function( canvas, option) {
 
 zodream.fn.prototype = {
 	default: {
-		images: [
-			{
-				id: "bg",
-				src: "img/bg.png"
-			},
-			{
-				id: "mo",
-				src: "img/mo.png"
-			}
-		],
-		size: {
-			width: window.innerWidth,
-			height: window.innerHeight
-		}
+		cat: "",
 	},
 	init: function(canvas) {
 		this.stage = new createjs.Stage(canvas);
 		createjs.Touch.enable(this.stage);
-		this.stage.canvas.width = this.settings.size.width;
-		this.stage.canvas.height = this.settings.size.height;
-		this.assets = Array();
 		this.loadAsset();
 	},
 	loadAsset: function() {
-		var preload = new createjs.LoadQueue(true);
-		preload.addEventListener("fileload", this.loadAssetComplete.bind(this));
-		//preload.loadFile();
-		preload.loadManifest(this.settings.images);
+		
 	},
 	loadScence: function() {
-		this.scence = new createjs.Shape();
-		this.scence.graphics.beginBitmapFill(this.assets[0], "no-repeat")
-			.drawRect(0, -this.assets[0].height, 
-			 this.settings.size.width, this.settings.size.height + this.assets[0].height);
-		this.stage.addChild(this.scence);
+		
 	},
 	loadShip: function() {
 		this.ship = new createjs.Bitmap(this.assets[1]);
@@ -52,22 +29,12 @@ zodream.fn.prototype = {
 		this.stage.addChild(this.ship);			
 	},
 	loadText: function() {
-		new createjs.Text('0', 'bold 14px Courier New', '#FFFFFF');
-		new createjs.Container();
-		addChid();	
-	},
-	loadAssetComplete: function(event) {
-		this.assets.push(event.result);
-		if(this.assets.length == this.settings.images.length) {
-			this.start();
-		}
+		
 	},
 	start: function() {
 		this.loadScence();
-		createjs.Ticker.timingMode = createjs.Ticker.RAF_SYNCHED; //createjs.Ticker.RAF
-		createjs.Ticker.setFPS(60);
-		createjs.Ticker.addEventListener('tick', this.update.bind(this));
-		//createjs.Tween.get(target).wait(500).to({alpha:0, visible:false}, 1000).call(handleComplete);	
+		createjs.Ticker.setFPS(30);
+		createjs.Ticker.addEventListener('tick', this.stage );
 	},
 	extend: function( obj ) {
 		for (var i = 1, len = arguments.length; i < len; i++) {
@@ -80,8 +47,4 @@ zodream.fn.prototype = {
 		};
 		return obj;
 	},
-	update: function() {
-		
-		this.stage.update();
-	}
 };
