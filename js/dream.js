@@ -203,7 +203,7 @@ zodream.fn.prototype = {
 				points.push(new zodream.point(8,i));				
 			}
 		}
-		for (var i = 1; i < 8; i++) {
+		for (var i = 0; i < 8; i++) {
 			if(this.circle[i][0].status != zodream.status.SELECTED) {
 				start.push(new zodream.point(i,0));				
 				points.push(new zodream.point(i,0));				
@@ -216,10 +216,10 @@ zodream.fn.prototype = {
 		
 		while (this.status == zodream.game.NONE) {                              //从外面向里面检测是否有逃生点；
 			var nexts = Array();
-			for (var i = 0; i < start.length; i++) {
+			for (var i = 0, len = start.length; i < len; i++) {
 				var p = start[i];
-				for (var j = 0; j < 6; j++) {
-					var tem = this.getNextPoint(p, j);
+				for (var j in zodream.direction) {
+					var tem = this.getNextPoint(p, zodream.direction[j]);
 					if(tem.x > 8 || tem.x < 0 || tem.y < 0 || tem.y > 8) {
 						continue;
 					}
@@ -230,7 +230,7 @@ zodream.fn.prototype = {
 						continue;
 					}
 					var b = false;
-					for (var m = 0, len = points.length; m < len; m++) {
+					for (var m = 0, leng = points.length; m < leng; m++) {
 						if(tem.x == points[m].x && tem.y == points[m].y) {
 							b = true;								
 							break;
@@ -244,6 +244,7 @@ zodream.fn.prototype = {
 					nexts.push(tem);
 				}
 			}
+			
 			
 			start = nexts;
 			if(start.length <= 0) {
@@ -281,7 +282,7 @@ zodream.fn.prototype = {
 			var nexts = Array();
 			for (var i = 0; i < start.length; i++) {
 				var p = start[i];
-				for (var j = 0; j < 6; j++) {
+				for (var j in zodream.direction) {
 					var tem = this.getNextPoint(p, j);
 					if(tem.x > 8 || tem.x < 0 || tem.y < 0 || tem.y > 8) {
 						continue;
@@ -334,9 +335,10 @@ zodream.fn.prototype = {
 		this.circle[this.cat.point.x][this.cat.point.y].setStatus(zodream.status.USED);			
 	},
 	getNextPoint: function(p) {
-		var point = new zodream.point(p.x, p.y);
+		var point = new zodream.point(p.x, p.y),
+			dire = arguments[1] || zodream.direction.LEFT;
 		point.kind = p.kind;
-		switch (arguments[1] || zodream.direction.LEFT) {
+		switch (dire) {
 			case zodream.direction.LEFT:
 				point.x --;
 				break;
@@ -356,14 +358,14 @@ zodream.fn.prototype = {
 				point.y ++;
 				break;
 			case zodream.direction.RIGHTBOTTOM:
-				if(point.y % 2 == 1) {
-					point.x ++;										
+				if(point.y % 2 == 0) {
+					point.x --;										
 				}
 				point.y ++;
 				break;
 			case zodream.direction.LEFTBOTTOM:
-				if(point.y % 2 == 0) {
-					point.x --;										
+				if(point.y % 2 == 1) {
+					point.x ++;										
 				}
 				point.y ++;
 				break;
