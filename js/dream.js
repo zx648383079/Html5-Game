@@ -290,7 +290,7 @@ zodream.fn.prototype = {
 			for (var i = 0; i < start.length; i++) {
 				var p = start[i];
 				for (var j in zodream.direction) {
-					var tem = this.getNextPoint(p, j);
+					var tem = this.getNextPoint(p, zodream.direction[j] );
 					if(tem.x > 8 || tem.x < 0 || tem.y < 0 || tem.y > 8) {
 						continue;
 					};
