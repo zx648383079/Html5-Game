@@ -122,9 +122,16 @@ zodream.fn.prototype = {
 		createjs.Touch.enable(this.stage);
 		this.loadScence();
 		this.loadCat();
+		//this.test(new zodream.point(4, 4));
 		this.status = zodream.game.NONE;
 		createjs.Ticker.setFPS(30);
 		createjs.Ticker.addEventListener('tick', this.stage );
+	},
+	test: function(point) {
+		for (var j in zodream.direction) {
+			var tem = this.getNextPoint(point, zodream.direction[j]);
+			this.circle[tem.x][tem.y].setStatus(zodream.status.SELECTED);
+		}
 	},
 	loadScence: function() {
 		this.container = new createjs.Container();
@@ -355,7 +362,7 @@ zodream.fn.prototype = {
 				point.y --;
 				break;
 			case zodream.direction.RIGHT:
-				point.y ++;
+				point.x ++;
 				break;
 			case zodream.direction.RIGHTBOTTOM:
 				if(point.y % 2 == 0) {
