@@ -65,13 +65,27 @@ zodream.fn = function() {
 	return this;
 };
 
+THREE.Curves = {};
+
+THREE.Curves.HeartCurve = THREE.Curve.create(
+	function( s ) {
+		this.scale = ( s === undefined ) ? 5 : s;
+	},
+	function( t ) {
+		t *= 2 * Math.PI;
+		var tx = 16 * Math.pow( Math.sin( t ), 3 );
+		var tz = 13 * Math.cos( t ) - 5 * Math.cos( 2 * t ) - 2 * Math.cos( 3 * t ) - Math.cos( 4 * t ), ty = 0;
+		return new THREE.Vector3( tx, ty, tz ).multiplyScalar( this.scale );
+	}
+);
+
 zodream.fn.prototype = {
 	init: function(canvas) {
 		this.initThree(canvas);
 		this.initCamera();
 		this.initScene();
 		this.initLight();
-		this.initObject();
+		this.initHear();
 		this.initStats(canvas);
 		this.render();
 	},
@@ -92,7 +106,7 @@ zodream.fn.prototype = {
 		});
 		this.renderer.setSize(this.width, this.height);
 		canvas.appendChild(this.renderer.domElement);
-		this.renderer.setClearColor(0xFFFFFF, 1.0);	
+		this.renderer.setClearColor(0x000000, 1.0);	
 	},
 	initStats: function(canvas) {
 		this.stats = new Stats();
@@ -119,9 +133,36 @@ zodream.fn.prototype = {
 		this.scene = new THREE.Scene();
 	},
 	initLight: function() {
-		this.light = new THREE.DirectionalLight(0xFF0000, 1.0, 0);
-		this.light.position.set(100, 100, 200);
+		this.light = new THREE.DirectionalLight(0xFFFFFF, 1.0, 0);
+		this.light.position.set(100, 100, 200).normalize();
 		this.scene.add(this.light);
+	},
+	initHear: function() {
+		var path = new THREE.Curves.HeartCurve(3, 5);
+		console.log(path);
+		var tube = new THREE.TubeGeometry( path, 100 , 2, 4, true);
+		this.tubeMesh = THREE.SceneUtils.createMultiMaterialObject( tube, [
+				new THREE.MeshLambertMaterial({
+					color: 0xff00ff
+				}),
+				new THREE.MeshBasicMaterial({
+					color: 0x000000,
+					opacity: 0.3,
+					wireframe: true,
+					transparent: true
+			})]);
+		this.parent = new THREE.Object3D();
+		this.parent.add(this.tubeMesh);
+		this.parent.position.y = 0;
+		this.scene.add( this.parent );
+	},
+	initCube: function() {
+		var geometry = new THREE.BoxGeometry( 150, 150, 150 );
+		var material = new THREE.MeshLambertMaterial( {color: 0x00ff00} );
+		this.cube = new THREE.Mesh( geometry, material );
+		
+		this.scene.add( this.cube );	
+		this.cube.position.set(0,0,0);
 	},
 	initObject: function() {
 		this.sphere = new THREE.Mesh(
@@ -216,7 +257,11 @@ zodream.fn.prototype = {
 		this.renderer.clear();
 		this.renderer.render(this.scene, this.camera);
 		window.requestNextAnimationFrame(this.render.bind(this));
-		
+		//this.cube.position.y += 1 ;
+		//this.cube.position.z -= 0.5 ;
+		//this.cube.rotation.x += 0.005;
+		//this.cube.rotation.y += 0.01;
+		this.parent.rotation.x += 0.005;
 		this.stats.update();
 	}
 };
