@@ -43,6 +43,9 @@ var Zodream;
         }
         Scene.prototype.init = function () {
         };
+        Scene.prototype.addChild = function () {
+            this.stage.addChild.apply(this.stage, arguments);
+        };
         Scene.prototype.setFPS = function (fps, mode) {
             if (fps === void 0) { fps = 60; }
             if (mode === void 0) { mode = createjs.Ticker.RAF_SYNCHED; }
@@ -76,7 +79,7 @@ var Zodream;
                 this._lable = new createjs.Text(num.toString(), 'bold 14px Courier New', '#000000');
                 this._lable.y = 10;
                 this._rect = new createjs.Shape(new createjs.Graphics().beginFill("#ffffff").drawRect(0, 0, 400, 30));
-                this.stage.addChild(this._rect, this._lable);
+                this.addChild(this._rect, this._lable);
             }
             this._lable.text = this._index.toString();
             this._rect.graphics.beginFill("#ff0000").drawRect(0, 0, this._index * 10, 30);
@@ -119,7 +122,7 @@ var Zodream;
             btn.x = Configs.width / 2;
             btn.y = Configs.height / 2;
             btn.addEventListener("click", this._click.bind(this));
-            this.stage.addChild(btn);
+            this.addChild(btn);
         };
         MainScene.prototype._click = function () {
             this.close();
@@ -141,17 +144,24 @@ var Zodream;
             var sky = new createjs.Shape(), bg = Resources.images["bg"];
             sky.graphics.beginBitmapFill(bg).drawRect(0, 0, Configs.width, Configs.height);
             sky.setTransform(0, 0, 1, Configs.height / bg.height);
-            console.log(bg);
             this.stage.addChild(sky);
+        };
+        GameScene.prototype._drawShip = function () {
         };
         return GameScene;
     })(Scene);
     Zodream.GameScene = GameScene;
     var EndScene = (function (_super) {
         __extends(EndScene, _super);
-        function EndScene() {
-            _super.apply(this, arguments);
+        function EndScene(arg, score) {
+            this._score = score;
+            _super.call(this, arg);
         }
+        EndScene.prototype._drawScore = function () {
+            var lable = new createjs.Text(this._score.toString(), 'bold 14px Courier New', '#000000');
+            lable.y = 10;
+            this.addChild(lable);
+        };
         return EndScene;
     })(Scene);
     Zodream.EndScene = EndScene;
@@ -177,7 +187,7 @@ var Zodream;
         Resources.sounds = function (id) {
             createjs.Sound.play(id);
         };
-        Resources.images = {};
+        Resources.images = new Object();
         return Resources;
     })();
     Zodream.Resources = Resources;

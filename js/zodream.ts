@@ -35,13 +35,17 @@ module Zodream {
 	export class Scene {
 		protected stage: createjs.Stage;
 		
-		constructor(arg: createjs.Stage) {
-			this.stage = arg;
-			this.init();
+		constructor(stage: createjs.Stage , arg?: any | any[]) {
+			this.stage = stage;
+			this.init(arg);
 		}
 		
-		protected init() {
+		protected init(arg?: any | any[]) {
 			
+		}
+		
+		protected addChild(arg: any | any[]) {
+			this.stage.addChild.apply(this.stage, arg);
 		}
 		
 		protected setFPS(
@@ -79,8 +83,7 @@ module Zodream {
 				this._lable = new createjs.Text(num.toString(), 'bold 14px Courier New', '#000000');
 				this._lable.y = 10;
 				this._rect = new createjs.Shape(new createjs.Graphics().beginFill("#ffffff").drawRect(0, 0, 400, 30));
-				this.stage.addChild(this._rect, this._lable);
-				
+				this.addChild( [ this._rect, this._lable ]);
 			}
 			
 			this._lable.text = this._index.toString();
@@ -122,7 +125,7 @@ module Zodream {
 			btn.x = Configs.width / 2;
 			btn.y = Configs.height / 2;
 			btn.addEventListener("click", this._click.bind(this));
-			this.stage.addChild(btn);
+			this.addChild(btn);
 		}
 		
 		private _click() {
@@ -143,11 +146,26 @@ module Zodream {
 				bg = Resources.images["bg"];
 			sky.graphics.beginBitmapFill(bg).drawRect(0, 0, Configs.width, Configs.height);
 			sky.setTransform(0, 0, 1 , Configs.height / bg.height);
-			this.stage.addChild(sky);
+			this.addChild(sky);
+		}
+		
+		private _drawShip() {
+			
 		}
 	}
 	
 	export class EndScene extends Scene {
+		private _score:string;
+		
+		protected init(arg: any) {
+			this._score = arg;
+		}
+		
+		private _drawScore() {
+			var lable = new createjs.Text(this._score.toString(), 'bold 14px Courier New', '#000000');
+			lable.y = 10;
+			this.addChild(lable);
+		}
 		
 	}
 	
