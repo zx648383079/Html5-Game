@@ -14,18 +14,18 @@
 	// The command is tsc. Assumes that tsc has been installed using npm install -g typescript
 	"command": "tsc",
 
-	// Show the output window only if unrecognized errors occur.
-	"showOutput": "silent",
-	
-	"windows": {
-		"command": "tsc"
-	},
-	
 	// The command is a shell script
 	"isShellCommand": true,
+	
+	"isWatching": true,
+	
+	"isBuildCommand": true,
+
+	// Show the output window only if unrecognized errors occur.
+	"showOutput": "silent",
 
 	// args is the HelloWorld program to compile.
-	"args": ["${file}"],
+	"args": ["-p","."],
 
 	// use the standard tsc problem matcher to find compile problems
 	// in the output.

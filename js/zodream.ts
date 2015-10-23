@@ -143,7 +143,6 @@ module Zodream {
 				bg = Resources.images["bg"];
 			sky.graphics.beginBitmapFill(bg).drawRect(0, 0, Configs.width, Configs.height);
 			sky.setTransform(0, 0, 1 , Configs.height / bg.height);
-			console.log(bg);
 			this.stage.addChild(sky);
 		}
 	}

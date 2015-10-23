@@ -177,7 +177,7 @@ var Zodream;
         Resources.sounds = function (id) {
             createjs.Sound.play(id);
         };
-        Resources.images = new Object();
+        Resources.images = {};
         return Resources;
     })();
     Zodream.Resources = Resources;
@@ -190,3 +190,4 @@ var Zodream;
     })();
     Zodream.Point = Point;
 })(Zodream || (Zodream = {}));
+//# sourceMappingURL=zodream.js.map
