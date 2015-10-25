@@ -9,8 +9,8 @@
 		#coins{width:90px;height: 70px;line-height: 70px;position:absolute;left:0px;top:0;padding-left: 60px;background:url(image/coins.png) no-repeat;background-size:30px 30px;background-position:20px 20px;font-size: 34px;color: #FFF;}
 	</style>
 	<title>简单跑酷游戏</title>
-	<script src="easeljs-0.7.1.min.js"></script>
-	<script src="preloadjs-0.4.1.min.js"></script>
+	<script src="easeljs-0.8.1.min.js"></script>
+	<script src="preloadjs-0.6.1.min.js"></script>
 	<script src="person.js"></script>
 	<script src="otherThings.js"></script>
 </head>
@@ -32,11 +32,11 @@
 			C_H = stage.canvas.height;
 
 			var manifest = [
-				{src:"image/man.png" , id:"man"},
-				{src:"image/ground.png" , id:"ground"},
-				{src:"image/bg.png" , id:"bg"},
-				{src:"image/high.jpg" , id:"high"},
-				{src:"image/coins.png" , id:"coin"}
+				{src:"../img/man.png" , id:"man"},
+				{src:"../img/ground.png" , id:"ground"},
+				{src:"../img/bg.png" , id:"bg"},
+				{src:"../img/high.jpg" , id:"high"},
+				{src:"../img/coins.png" , id:"coin"}
 			]
 
 			loader = new createjs.LoadQueue(false);

@@ -14,7 +14,6 @@ var Zodream;
             app.setTouch();
             app.setSize(Configs.width, Configs.height);
             app.init();
-            return app;
         };
         return App;
     })();
@@ -31,20 +30,39 @@ var Zodream;
             this.stage.canvas.height = height;
         };
         Program.prototype.init = function () {
-            return new LoadScene(this.stage);
+            new LoadScene(this.stage);
         };
         return Program;
     })();
     Zodream.Program = Program;
     var Scene = (function () {
-        function Scene(arg) {
-            this.stage = arg;
-            this.init();
+        function Scene(stage) {
+            var arg = [];
+            for (var _i = 1; _i < arguments.length; _i++) {
+                arg[_i - 1] = arguments[_i];
+            }
+            this.stage = stage;
+            this.init.apply(this, arg);
         }
         Scene.prototype.init = function () {
+            var arg = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                arg[_i - 0] = arguments[_i];
+            }
+        };
+        Scene.prototype.addEvent = function (name, func) {
+            this.stage.addEventListener(name, func);
+        };
+        Scene.prototype.addKeyEvent = function (func) {
+            return window.addEventListener("keydown", func);
         };
         Scene.prototype.addChild = function () {
-            this.stage.addChild.apply(this.stage, arguments);
+            var arg = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                arg[_i - 0] = arguments[_i];
+            }
+            (_a = this.stage.addChild).call.apply(_a, [this.stage].concat(arg));
+            var _a;
         };
         Scene.prototype.setFPS = function (fps, mode) {
             if (fps === void 0) { fps = 60; }
@@ -104,7 +122,7 @@ var Zodream;
             this.close();
             for (var i = 0, len = Configs.images.length; i < len; i++) {
                 var image = Configs.images[i];
-                Resources.images[image.id] = this._loader.getResult(image.id);
+                Resources.setImage(image.id, this._loader.getResult(image.id));
             }
             new MainScene(this.stage);
         };
@@ -139,24 +157,108 @@ var Zodream;
         GameScene.prototype.init = function () {
             _super.prototype.init.call(this);
             this._drawSky();
+            this._drawShip();
+            this._drawStone();
+            this.setFPS(30);
+            this.addKeyEvent(this._keyDown.bind(this));
+        };
+        GameScene.prototype._keyDown = function (event) {
+            switch (event.keyCode) {
+                case 39:
+                    this._shap.animation("run");
+                    this._shap.energy = 100;
+                    break;
+                case 32:
+                    this._shap.animation("jump");
+                    this._shap.lift += 50;
+                    break;
+                default:
+                    break;
+            }
         };
         GameScene.prototype._drawSky = function () {
-            var sky = new createjs.Shape(), bg = Resources.images["bg"];
+            var sky = new createjs.Shape(), bg = Resources.getImage("bg");
             sky.graphics.beginBitmapFill(bg).drawRect(0, 0, Configs.width, Configs.height);
             sky.setTransform(0, 0, 1, Configs.height / bg.height);
-            this.stage.addChild(sky);
+            this.addChild(sky);
         };
         GameScene.prototype._drawShip = function () {
+            var manSpriteSheet = new createjs.SpriteSheet({
+                "images": [Resources.getImage("man")],
+                "frames": { "regX": 0, "height": 64, "count": 66, "regY": 1, "width": 64 },
+                "animations": {
+                    "stop": {
+                        frames: [65],
+                        next: "stop",
+                        speed: 0.2,
+                    },
+                    "run": {
+                        frames: [21, 20, 19, 18, 17, 16, 15, 14, 13, 12],
+                        next: "run",
+                        speed: 0.3,
+                    },
+                    "jump": {
+                        frames: [33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],
+                        next: "stop",
+                        speed: 0.1,
+                    },
+                    "die": {
+                        frames: [8, 7, 6, 5, 4, 3, 2, 1, 0],
+                        next: "die",
+                        speed: 0.3,
+                    }
+                }
+            });
+            this._shap = new Person(manSpriteSheet, "stop");
+            this._shap.framerate = 13;
+            this._shap.setBounds(60, 264, 64, 64);
+            this.addChild(this._shap);
+        };
+        GameScene.prototype._drawStone = function () {
+            var stone = new Shape(), img = Resources.getImage("ground");
+            stone.graphics.beginBitmapFill(img).drawRect(0, 0, Configs.width, img.height);
+            stone.setBounds(0, 200, Configs.width, 200);
+            stone.scaleY = stone.point.y / img.height;
+            this.addChild(stone);
+            if (this._stones === undefined) {
+                this._stones = new Array();
+            }
+            this._stones.push(stone);
+        };
+        GameScene.prototype.update = function () {
+            var _this = this;
+            var bound = this._shap.getBounds();
+            this._stones.forEach(function (stone) {
+                if (bound.x + bound.width >= stone.x && stone.y < bound.y + bound.height) {
+                    _this._shap.energy = 0;
+                }
+                var right = stone.x + stone.getBounds().width;
+                if (((bound.x > stone.x &&
+                    bound.x < right) ||
+                    (bound.x + bound.width > stone.x &&
+                        bound.x + bound.width < right)) &&
+                    bound.y + bound.height >= stone.y) {
+                    _this._shap.canDown = false;
+                }
+            });
+            if (this._shap.point.y <= 0) {
+                this.close();
+                new EndScene(this.stage);
+            }
+            this._shap.move();
+            _super.prototype.update.call(this);
         };
         return GameScene;
     })(Scene);
     Zodream.GameScene = GameScene;
     var EndScene = (function (_super) {
         __extends(EndScene, _super);
-        function EndScene(arg, score) {
-            this._score = score;
-            _super.call(this, arg);
+        function EndScene() {
+            _super.apply(this, arguments);
         }
+        EndScene.prototype.init = function (arg) {
+            this._score = arg;
+        };
         EndScene.prototype._drawScore = function () {
             var lable = new createjs.Text(this._score.toString(), 'bold 14px Courier New', '#000000');
             lable.y = 10;
@@ -165,6 +267,188 @@ var Zodream;
         return EndScene;
     })(Scene);
     Zodream.EndScene = EndScene;
+    var Person = (function (_super) {
+        __extends(Person, _super);
+        function Person() {
+            _super.apply(this, arguments);
+            this.speed = 2;
+            this._energy = 0;
+            this.gravity = 2;
+            this.lift = 0;
+            this.canDown = true;
+        }
+        Object.defineProperty(Person.prototype, "point", {
+            get: function () {
+                this._point.setWorld(this.x, this.y);
+                return this._point;
+            },
+            set: function (arg) {
+                this._point = arg;
+                var val = arg.getWorld();
+                this.x = val.x;
+                this.y = val.y;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Person.prototype, "size", {
+            get: function () {
+                return this._size;
+            },
+            set: function (arg) {
+                this._size = arg;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Person.prototype.setBounds = function (x, y, width, height) {
+            if (x instanceof Point) {
+                this.point = x;
+                if (y instanceof Size) {
+                    this.size = y;
+                }
+                else {
+                    this.size = new Size(y, width);
+                }
+            }
+            else {
+                this.point = new Point(x, y);
+                if (width instanceof Size) {
+                    this.size = width;
+                }
+                else {
+                    this.size = new Size(width, height);
+                }
+            }
+        };
+        Person.prototype.getBounds = function () {
+            return {
+                x: this.x,
+                y: this.y,
+                width: this.size.width,
+                height: this.size.height
+            };
+        };
+        Object.defineProperty(Person.prototype, "energy", {
+            get: function () {
+                return this._energy;
+            },
+            set: function (arg) {
+                if (this._energy >= 0 && arg > 0) {
+                    this._energy += arg;
+                }
+                else if ((this._energy > 0 && arg <= 0) || (this._energy < 0 && arg >= 0)) {
+                    this._energy = arg;
+                }
+                else if (this._energy <= 0 && arg < 0) {
+                    this._energy += arg;
+                }
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Person.prototype.animation = function (arg) {
+            if (arg != this.currentAnimation) {
+                this.gotoAndPlay(arg);
+            }
+        };
+        Person.prototype.move = function () {
+            if (this.lift > 0) {
+                this.animation("jump");
+                this.y -= this.gravity;
+                this.lift -= this.gravity;
+                if (this.lift <= 0) {
+                    this.lift = 0;
+                    this.animation("stop");
+                }
+            }
+            if (this._energy > 0) {
+                if (this.currentAnimation == "stop") {
+                    this.animation("run");
+                }
+                this.x += this.speed;
+                this._energy -= this.speed;
+                if (this._energy <= 0) {
+                    this._energy = 0;
+                    this.animation("stop");
+                }
+            }
+            else if (this._energy < 0) {
+                this.x -= this.speed;
+                this._energy += this.speed;
+                if (this._energy >= 0) {
+                    this._energy = 0;
+                    this.animation("stop");
+                }
+            }
+            if (this.canDown && this.lift == 0) {
+                this.y += this.gravity;
+            }
+            this.canDown = true;
+        };
+        return Person;
+    })(createjs.Sprite);
+    Zodream.Person = Person;
+    var Shape = (function (_super) {
+        __extends(Shape, _super);
+        function Shape() {
+            _super.apply(this, arguments);
+        }
+        Object.defineProperty(Shape.prototype, "point", {
+            get: function () {
+                this._point.setWorld(this.x, this.y);
+                return this._point;
+            },
+            set: function (arg) {
+                this._point = arg;
+                var val = arg.getWorld();
+                this.x = val.x;
+                this.y = val.y;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Object.defineProperty(Shape.prototype, "size", {
+            get: function () {
+                return this._size;
+            },
+            set: function (arg) {
+                this._size = arg;
+            },
+            enumerable: true,
+            configurable: true
+        });
+        Shape.prototype.setBounds = function (x, y, width, height) {
+            if (x instanceof Point) {
+                this.point = x;
+                if (y instanceof Size) {
+                    this.size = y;
+                }
+                else {
+                    this.size = new Size(y, width);
+                }
+            }
+            else {
+                this.point = new Point(x, y);
+                if (width instanceof Size) {
+                    this.size = width;
+                }
+                else {
+                    this.size = new Size(width, height);
+                }
+            }
+        };
+        Shape.prototype.getBounds = function () {
+            return {
+                x: this.x,
+                y: this.y,
+                width: this.size.width,
+                height: this.size.height
+            };
+        };
+        return Shape;
+    })(createjs.Shape);
+    Zodream.Shape = Shape;
     var Configs = (function () {
         function Configs() {
         }
@@ -175,7 +459,6 @@ var Zodream;
             { src: "img/high.jpg", id: "high" },
             { src: "img/coins.png", id: "coin" }
         ];
-        Configs.sounds = {};
         Configs.width = window.innerWidth;
         Configs.height = window.innerHeight;
         return Configs;
@@ -184,10 +467,18 @@ var Zodream;
     var Resources = (function () {
         function Resources() {
         }
+        Resources.setImage = function (id, img) {
+            this.images[id] = img;
+        };
+        Resources.getImage = function (id) {
+            if (this.images[id] == undefined)
+                return null;
+            return this.images[id];
+        };
         Resources.sounds = function (id) {
             createjs.Sound.play(id);
         };
-        Resources.images = new Object();
+        Resources.images = {};
         return Resources;
     })();
     Zodream.Resources = Resources;
@@ -196,8 +487,33 @@ var Zodream;
             this.x = x;
             this.y = y;
         }
+        Point.prototype.setLocal = function (x, y) {
+            this.x = x;
+            this.y = y;
+        };
+        Point.prototype.getLocal = function () {
+            return this;
+        };
+        Point.prototype.setWorld = function (x, y) {
+            this.x = x;
+            this.y = Configs.height - y;
+        };
+        Point.prototype.getWorld = function () {
+            return {
+                x: this.x,
+                y: Configs.height - this.y
+            };
+        };
         return Point;
     })();
     Zodream.Point = Point;
+    var Size = (function () {
+        function Size(width, height) {
+            this.width = width;
+            this.height = height;
+        }
+        return Size;
+    })();
+    Zodream.Size = Size;
 })(Zodream || (Zodream = {}));
 //# sourceMappingURL=zodream.js.map

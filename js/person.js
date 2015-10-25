@@ -29,20 +29,20 @@
 		init:function(img){
 			var manSpriteSheet = new createjs.SpriteSheet({
 				"images":[img],
-				"frames":{"regX":0,"height":PICWIDTH,"count":45,"regY":1,"width":PICHEIGHT},
+				"frames":{ "regX": 0, "height": PICWIDTH, "count": 66, "regY":1, "width": PICHEIGHT },
 				"animations":{
 					"run":{
-						frames:[21,20,19,18,17,16,15,14,13,12],
+						frames:[ 21,20,19,18,17,16,15,14,13,12 ],
 						next:"run",
 						speed:1,
 					}, 
 					"jump":{
-						frames:[34],
+						frames:[ 65 ],
 						next:"jump",
 						speed:1,
 					},
 					"die":{
-						frames:[8,7,6,5,4,3,2,1,0],
+						frames:[ 8, 7, 6, 5, 4, 3, 2, 1, 0 ],
 						next:"die",
 						speed:1,
 					}
