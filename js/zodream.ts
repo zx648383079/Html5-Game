@@ -68,6 +68,7 @@ module Zodream {
 		}
 		
 		protected close(): void {
+			createjs.Ticker.removeAllEventListeners();
 			this.stage.removeAllChildren();
 		}
 	}
@@ -128,6 +129,11 @@ module Zodream {
 	export class MainScene extends Scene {
 		public init(): void{
 			super.init();
+			this._drawBtn();
+			this.setFPS(10);
+		}
+		
+		private _drawBtn() {
 			var btn = new createjs.Shape(new createjs.Graphics().beginFill("#ff0000").drawRect(0, 0, 100, 50));
 			btn.x = Configs.width / 2;
 			btn.y = Configs.height / 2;
@@ -148,8 +154,11 @@ module Zodream {
 		
 		public init() {
 			super.init();
+			this._stones = new Array();		
+				
 			this._drawSky();
 			this._drawShip();
+			
 			this._drawStone();
 			
 			this.setFPS(30);
@@ -160,7 +169,7 @@ module Zodream {
 			switch (event.keyCode) {
 				case 39:
 					this._shap.animation("run");
-					this._shap.energy = 100;
+					this._shap.energy = 60;
 					break;
 				case 32:
 					this._shap.animation("jump");
@@ -171,11 +180,10 @@ module Zodream {
 			}
 		}
 		
-		private _drawSky(): void {
-			var sky = new createjs.Shape(),
-				bg = Resources.getImage("bg");
-			sky.graphics.beginBitmapFill(bg).drawRect(0, 0, Configs.width, Configs.height);
-			sky.setTransform(0, 0, 1 , Configs.height / bg.height);
+		private _drawSky(arg: HTMLImageElement = Resources.getImage("bg")): void {
+			var sky = new createjs.Shape();
+			sky.graphics.beginBitmapFill( arg ).drawRect(0, 0, Configs.width, Configs.height);
+			sky.setTransform(0, 0, 1 , Configs.height / arg.height);
 			this.addChild(sky);
 		}
 		
@@ -192,7 +200,7 @@ module Zodream {
 					"run": {
 						frames: [ 21, 20, 19, 18, 17, 16, 15, 14, 13, 12 ],
 						next: "run",
-						speed: 0.3,
+						speed: 0.4,
 					}, 
 					"jump": {
 						frames: [ 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43 ],
@@ -206,24 +214,21 @@ module Zodream {
 					}
 				}
 			});
-			this._shap = new Person(manSpriteSheet , "stop");
+			this._shap = new Person(manSpriteSheet , "run");
 			this._shap.framerate = 13;
-			this._shap.setBounds(60, 264, 64, 64);			
+			this._shap.setBounds( 0, 264, 64, 64);
+			this._shap.energy = 100;			
 			//this._shap.setTransform( 60, 60, 1.5, 1.5);
 			this.addChild(this._shap);
 		}
 		
-		private _drawStone() {
-			var stone = new Shape(),
-				img = Resources.getImage("ground");
-			stone.graphics.beginBitmapFill( img ).drawRect(0, 0, Configs.width, img.height);
-			stone.setBounds(0, 200, Configs.width, 200);
-			stone.scaleY = stone.point.y / img.height;
+		private _drawStone(arg: HTMLImageElement = Resources.getImage("ground"), i: number = 0) {
+			var stone = new Shape();
+			stone.graphics.beginBitmapFill( arg ).drawRect(0, 0, arg.width, arg.height);
+			stone.setBounds(arg.width * i, 200, arg.width , 200);
+			stone.scaleY = stone.point.y / arg.height;
 			this.addChild(stone);
-			if(this._stones === undefined) {
-				this._stones = new Array();
-			}
-			this._stones.push(stone);			
+			this._stones.push(stone);		
 		}
 		
 		protected update() {
@@ -243,7 +248,7 @@ module Zodream {
 			});
 			if(this._shap.point.y <= 0) {
 				this.close();
-				new EndScene(this.stage);
+				return new EndScene(this.stage, 0);
 			}
 			
 			this._shap.move();			
@@ -255,13 +260,30 @@ module Zodream {
 		private _score: string;
 		
 		protected init(arg: any): void {
+			super.init();
 			this._score = arg;
+			this._drawScore();
+			this._drawBtn();
+			this.setFPS(10);
 		}
 		
 		private _drawScore(): void {
 			var lable = new createjs.Text(this._score.toString(), 'bold 14px Courier New', '#000000');
 			lable.y = 10;
 			this.addChild(lable);
+		}
+		
+		private _drawBtn() {
+			var btn = new Shape(new createjs.Graphics().beginFill("#ff0000").drawRect(0, 0, 100, 50));
+			btn.x = Configs.width / 2;
+			btn.y = Configs.height / 2;
+			btn.addEventListener("click", this._click.bind(this));
+			this.addChild(btn);
+		}
+		
+		private _click(): void {
+			this.close();
+			new GameScene(this.stage);
 		}
 		
 	}
