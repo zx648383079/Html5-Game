@@ -126,7 +126,7 @@ var Zodream;
             this._loader = new createjs.LoadQueue(true);
             this._loader.addEventListener("complete", this._complete.bind(this));
             this._loader.addEventListener("fileload", this._fileLoad.bind(this));
-            this._loader.loadManifest(Configs.images);
+            this._loader.loadManifest(Configs.resources);
             this._loader.getResult();
         };
         LoadScene.prototype._sounds = function () {
@@ -139,9 +139,14 @@ var Zodream;
             this._setSchedule(this._index++);
         };
         LoadScene.prototype._complete = function () {
-            for (var i = 0, len = Configs.images.length; i < len; i++) {
-                var image = Configs.images[i];
-                Resources.setImage(image.id, this._loader.getResult(image.id));
+            for (var i = 0, len = Configs.resources.length; i < len; i++) {
+                var image = Configs.resources[i];
+                if (image.id == "model") {
+                    Resources.models = this._loader.getResult(image.id);
+                }
+                else {
+                    Resources.setImage(image.id, this._loader.getResult(image.id));
+                }
             }
             this.navigate(new MainScene());
         };
@@ -181,7 +186,20 @@ var Zodream;
             this._stones = new Array();
             this._drawSky();
             this._drawShip();
-            this._drawStone(new Point(0, 200));
+            for (var i = 0; i < 20; i++) {
+                switch (Resources.models[0][i]) {
+                    case 0:
+                        break;
+                    case 1:
+                        this._drawStone(new Point(i * 80, 200));
+                        break;
+                    case 2:
+                        this._drawStone(new Point(i * 80, 250), Resources.getImage("high"));
+                        break;
+                    default:
+                        break;
+                }
+            }
             this.setFPS(30);
             this.addKeyEvent(this._keyDown.bind(this));
         };
@@ -193,7 +211,7 @@ var Zodream;
                     break;
                 case 32:
                     this._shap.animation("jump");
-                    this._shap.lift += 50;
+                    this._shap.lift = 50;
                     break;
                 default:
                     break;
@@ -242,8 +260,8 @@ var Zodream;
         GameScene.prototype._drawStone = function (point, arg) {
             if (arg === void 0) { arg = Resources.getImage("ground"); }
             var stone = new Shape();
-            stone.graphics.beginBitmapFill(arg).drawRect(0, 0, arg.width, arg.height);
-            stone.setBounds(point, arg.width, 200);
+            stone.graphics.beginBitmapFill(arg).drawRect(0, 0, 80, arg.height);
+            stone.setBounds(point, 80, 200);
             stone.scaleY = stone.point.y / arg.height;
             this.addChild(stone);
             this._stones.push(stone);
@@ -252,7 +270,7 @@ var Zodream;
             var _this = this;
             var bound = this._shap.getBounds();
             this._stones.forEach(function (stone) {
-                if (bound.x + bound.width >= stone.x && stone.y < bound.y + bound.height) {
+                if (bound.x + bound.width == stone.x && stone.y < bound.y + bound.height) {
                     _this._shap.energy = 0;
                 }
                 var right = stone.x + stone.getBounds().width;
@@ -310,7 +328,7 @@ var Zodream;
             this.speed = 2;
             this._energy = 0;
             this.gravity = 2;
-            this.lift = 0;
+            this._lift = 0;
             this.canDown = true;
         }
         Object.defineProperty(Person.prototype, "point", {
@@ -383,18 +401,32 @@ var Zodream;
             enumerable: true,
             configurable: true
         });
+        Object.defineProperty(Person.prototype, "lift", {
+            get: function () {
+                return this._lift;
+            },
+            set: function (arg) {
+                if (this._lift < 100) {
+                    this._lift += arg;
+                    console.log(arg, this._lift);
+                }
+                console.log(this._lift);
+            },
+            enumerable: true,
+            configurable: true
+        });
         Person.prototype.animation = function (arg) {
             if (arg != this.currentAnimation) {
                 this.gotoAndPlay(arg);
             }
         };
         Person.prototype.move = function () {
-            if (this.lift > 0) {
+            if (this._lift > 0) {
                 this.animation("jump");
                 this.y -= this.gravity;
-                this.lift -= this.gravity;
-                if (this.lift <= 0) {
-                    this.lift = 0;
+                this._lift -= this.gravity;
+                if (this._lift <= 0) {
+                    this._lift = 0;
                     this.animation("stop");
                 }
             }
@@ -417,7 +449,7 @@ var Zodream;
                     this.animation("stop");
                 }
             }
-            if (this.canDown && this.lift == 0) {
+            if (this.canDown && this._lift == 0) {
                 this.y += this.gravity;
             }
             this.canDown = true;
@@ -488,12 +520,13 @@ var Zodream;
     var Configs = (function () {
         function Configs() {
         }
-        Configs.images = [
+        Configs.resources = [
             { src: "img/man.png", id: "man" },
             { src: "img/ground.png", id: "ground" },
             { src: "img/bg.png", id: "bg" },
             { src: "img/high.jpg", id: "high" },
-            { src: "img/coins.png", id: "coin" }
+            { src: "img/coins.png", id: "coin" },
+            { src: "js/game.json", id: "model" }
         ];
         Configs.width = window.innerWidth;
         Configs.height = window.innerHeight;
@@ -515,6 +548,7 @@ var Zodream;
             createjs.Sound.play(id);
         };
         Resources.images = {};
+        Resources.models = [];
         return Resources;
     })();
     Zodream.Resources = Resources;
