@@ -2,11 +2,12 @@
 
 module Zodream {
 	export class App {
-		public static main (arg : string | HTMLCanvasElement) {
+		public static main (arg : string | HTMLCanvasElement): Program {
 			var app = new Zodream.Program(arg);
 			app.setTouch();
 			app.setSize(Configs.width, Configs.height);
 			app.init();
+			return app;
 		} 
 	}
 	
@@ -34,16 +35,23 @@ module Zodream {
 	export class Scene {
 		protected stage: createjs.Stage;
 		
-		constructor(stage: createjs.Stage , ...arg: any[]) {
-			this.stage = stage;
-			this.init(...arg);
+		constructor(stage?: createjs.Stage , ...arg: any[]) {
+			if(stage != undefined ) {
+				this.stage = stage;		
+				this.init(...arg);		
+			}
 		}
 		
-		protected init(...arg: any[]) {
+		protected init(...arg: any[]): void {
 			
 		}
 		
-		protected addEvent(name: string, func: (eventObj: Object) => void ) {
+		public setStage(arg: createjs.Stage, ...param: any[]): void {
+			this.stage = arg;
+			this.init(...param);
+		}
+		
+		protected addEvent(name: string, func: (eventObj: Object) => void ): void {
 			this.stage.addEventListener( name , func );
 		}
 		
@@ -71,6 +79,11 @@ module Zodream {
 			createjs.Ticker.removeAllEventListeners();
 			this.stage.removeAllChildren();
 		}
+		
+		public navigate(arg: Scene, ...param: any[]) {
+			this.close();
+			arg.setStage(this.stage, ...param);
+		}
 	}
 	
 	export class LoadScene extends Scene {
@@ -79,14 +92,14 @@ module Zodream {
 		private _index: number;
 		private _loader: createjs.LoadQueue;
 		
-		protected init() {
+		protected init(): void {
 			super.init();
 			this._index = 0;
-			this.images();
+			this._images();
 			this.setFPS(10);
 		}
 		
-		private setSchedule(num: number = 0) {
+		private _setSchedule(num: number = 0): void {
 			if(this._lable === undefined) {
 				this._lable = new createjs.Text(num.toString(), 'bold 14px Courier New', '#000000');
 				this._lable.y = 10;
@@ -98,31 +111,31 @@ module Zodream {
 			this._rect.graphics.beginFill("#ff0000").drawRect(0, 0 , this._index * 10 , 30);
 		}
 		
-		private images() {
+		private _images(): void {
 			this._loader = new createjs.LoadQueue(true);
-			this._loader.addEventListener("complete" , this.complete.bind(this));
-			this._loader.addEventListener("fileload", this.fileLoad.bind(this));
+			this._loader.addEventListener("complete" , this._complete.bind(this));
+			this._loader.addEventListener("fileload", this._fileLoad.bind(this));
 			this._loader.loadManifest(Configs.images);
 			this._loader.getResult()
 		}
-		private sounds() {
+		private _sounds(): void {
 			createjs.Sound.alternateExtensions = ["mp3"];
 			var preload = new createjs.LoadQueue(true);
 			preload.installPlugin( createjs.Sound );
 			preload.loadManifest( Configs.sounds );
 		}
 		
-		private fileLoad() {
-			this.setSchedule( this._index ++ );
+		private _fileLoad(): void {
+			this._setSchedule( this._index ++ );
 		}
 		
-		private complete() {
-			this.close();
+		private _complete(): void {
 			for (var i = 0, len = Configs.images.length; i < len; i++) {
 				var image = Configs.images[i];
 				Resources.setImage( image.id , this._loader.getResult(image.id) );
 			}
-			new MainScene(this.stage);
+			
+			this.navigate(new MainScene());
 		}
 	}
 	
@@ -133,7 +146,7 @@ module Zodream {
 			this.setFPS(10);
 		}
 		
-		private _drawBtn() {
+		private _drawBtn(): void {
 			var btn = new createjs.Shape(new createjs.Graphics().beginFill("#ff0000").drawRect(0, 0, 100, 50));
 			btn.x = Configs.width / 2;
 			btn.y = Configs.height / 2;
@@ -142,8 +155,7 @@ module Zodream {
 		}
 		
 		private _click(): void {
-			this.close();
-			new GameScene(this.stage);
+			this.navigate( new GameScene() );
 		}
 	}
 	
@@ -152,20 +164,20 @@ module Zodream {
 		
 		private _stones: Shape[];
 		
-		public init() {
+		public init(): void {
 			super.init();
 			this._stones = new Array();		
 				
 			this._drawSky();
 			this._drawShip();
 			
-			this._drawStone();
+			this._drawStone( new Point(0, 200) );
 			
 			this.setFPS(30);
 			this.addKeyEvent(this._keyDown.bind(this));
 		}
 		
-		private _keyDown(event: any){
+		private _keyDown(event: any): void{
 			switch (event.keyCode) {
 				case 39:
 					this._shap.animation("run");
@@ -222,16 +234,16 @@ module Zodream {
 			this.addChild(this._shap);
 		}
 		
-		private _drawStone(arg: HTMLImageElement = Resources.getImage("ground"), i: number = 0) {
+		private _drawStone(point: Point, arg: HTMLImageElement = Resources.getImage("ground")): void {
 			var stone = new Shape();
 			stone.graphics.beginBitmapFill( arg ).drawRect(0, 0, arg.width, arg.height);
-			stone.setBounds(arg.width * i, 200, arg.width , 200);
+			stone.setBounds( point , arg.width , 200 );
 			stone.scaleY = stone.point.y / arg.height;
 			this.addChild(stone);
 			this._stones.push(stone);		
 		}
 		
-		protected update() {
+		protected update(): void {
 			var bound = this._shap.getBounds();			
 			this._stones.forEach(stone => {
 				if(bound.x + bound.width >= stone.x && stone.y < bound.y + bound.height) {
@@ -246,13 +258,12 @@ module Zodream {
 					this._shap.canDown = false;
 				}
 			});
-			if(this._shap.point.y <= 0) {
-				this.close();
-				return new EndScene(this.stage, 0);
-			}
-			
 			this._shap.move();			
 			super.update();
+			
+			if(this._shap.point.y <= 0) {
+				this.navigate( new EndScene(), 0);
+			}
 		}
 	}
 	
@@ -273,7 +284,7 @@ module Zodream {
 			this.addChild(lable);
 		}
 		
-		private _drawBtn() {
+		private _drawBtn(): void {
 			var btn = new Shape(new createjs.Graphics().beginFill("#ff0000").drawRect(0, 0, 100, 50));
 			btn.x = Configs.width / 2;
 			btn.y = Configs.height / 2;
@@ -282,10 +293,8 @@ module Zodream {
 		}
 		
 		private _click(): void {
-			this.close();
-			new GameScene(this.stage);
+			this.navigate( new GameScene() );
 		}
-		
 	}
 	
 	export class Person extends createjs.Sprite {
@@ -532,11 +541,5 @@ module Zodream {
 			public height?: number
 		){
 		}
-	}
-}
-
-module Models {
-	interface Base {
-		
 	}
 }

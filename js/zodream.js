@@ -14,6 +14,7 @@ var Zodream;
             app.setTouch();
             app.setSize(Configs.width, Configs.height);
             app.init();
+            return app;
         };
         return App;
     })();
@@ -41,14 +42,24 @@ var Zodream;
             for (var _i = 1; _i < arguments.length; _i++) {
                 arg[_i - 1] = arguments[_i];
             }
-            this.stage = stage;
-            this.init.apply(this, arg);
+            if (stage != undefined) {
+                this.stage = stage;
+                this.init.apply(this, arg);
+            }
         }
         Scene.prototype.init = function () {
             var arg = [];
             for (var _i = 0; _i < arguments.length; _i++) {
                 arg[_i - 0] = arguments[_i];
             }
+        };
+        Scene.prototype.setStage = function (arg) {
+            var param = [];
+            for (var _i = 1; _i < arguments.length; _i++) {
+                param[_i - 1] = arguments[_i];
+            }
+            this.stage = arg;
+            this.init.apply(this, param);
         };
         Scene.prototype.addEvent = function (name, func) {
             this.stage.addEventListener(name, func);
@@ -78,6 +89,14 @@ var Zodream;
             createjs.Ticker.removeAllEventListeners();
             this.stage.removeAllChildren();
         };
+        Scene.prototype.navigate = function (arg) {
+            var param = [];
+            for (var _i = 1; _i < arguments.length; _i++) {
+                param[_i - 1] = arguments[_i];
+            }
+            this.close();
+            arg.setStage.apply(arg, [this.stage].concat(param));
+        };
         return Scene;
     })();
     Zodream.Scene = Scene;
@@ -89,10 +108,10 @@ var Zodream;
         LoadScene.prototype.init = function () {
             _super.prototype.init.call(this);
             this._index = 0;
-            this.images();
+            this._images();
             this.setFPS(10);
         };
-        LoadScene.prototype.setSchedule = function (num) {
+        LoadScene.prototype._setSchedule = function (num) {
             if (num === void 0) { num = 0; }
             if (this._lable === undefined) {
                 this._lable = new createjs.Text(num.toString(), 'bold 14px Courier New', '#000000');
@@ -103,29 +122,28 @@ var Zodream;
             this._lable.text = this._index.toString();
             this._rect.graphics.beginFill("#ff0000").drawRect(0, 0, this._index * 10, 30);
         };
-        LoadScene.prototype.images = function () {
+        LoadScene.prototype._images = function () {
             this._loader = new createjs.LoadQueue(true);
-            this._loader.addEventListener("complete", this.complete.bind(this));
-            this._loader.addEventListener("fileload", this.fileLoad.bind(this));
+            this._loader.addEventListener("complete", this._complete.bind(this));
+            this._loader.addEventListener("fileload", this._fileLoad.bind(this));
             this._loader.loadManifest(Configs.images);
             this._loader.getResult();
         };
-        LoadScene.prototype.sounds = function () {
+        LoadScene.prototype._sounds = function () {
             createjs.Sound.alternateExtensions = ["mp3"];
             var preload = new createjs.LoadQueue(true);
             preload.installPlugin(createjs.Sound);
             preload.loadManifest(Configs.sounds);
         };
-        LoadScene.prototype.fileLoad = function () {
-            this.setSchedule(this._index++);
+        LoadScene.prototype._fileLoad = function () {
+            this._setSchedule(this._index++);
         };
-        LoadScene.prototype.complete = function () {
-            this.close();
+        LoadScene.prototype._complete = function () {
             for (var i = 0, len = Configs.images.length; i < len; i++) {
                 var image = Configs.images[i];
                 Resources.setImage(image.id, this._loader.getResult(image.id));
             }
-            new MainScene(this.stage);
+            this.navigate(new MainScene());
         };
         return LoadScene;
     })(Scene);
@@ -148,8 +166,7 @@ var Zodream;
             this.addChild(btn);
         };
         MainScene.prototype._click = function () {
-            this.close();
-            new GameScene(this.stage);
+            this.navigate(new GameScene());
         };
         return MainScene;
     })(Scene);
@@ -164,7 +181,7 @@ var Zodream;
             this._stones = new Array();
             this._drawSky();
             this._drawShip();
-            this._drawStone();
+            this._drawStone(new Point(0, 200));
             this.setFPS(30);
             this.addKeyEvent(this._keyDown.bind(this));
         };
@@ -222,12 +239,11 @@ var Zodream;
             this._shap.energy = 100;
             this.addChild(this._shap);
         };
-        GameScene.prototype._drawStone = function (arg, i) {
+        GameScene.prototype._drawStone = function (point, arg) {
             if (arg === void 0) { arg = Resources.getImage("ground"); }
-            if (i === void 0) { i = 0; }
             var stone = new Shape();
             stone.graphics.beginBitmapFill(arg).drawRect(0, 0, arg.width, arg.height);
-            stone.setBounds(arg.width * i, 200, arg.width, 200);
+            stone.setBounds(point, arg.width, 200);
             stone.scaleY = stone.point.y / arg.height;
             this.addChild(stone);
             this._stones.push(stone);
@@ -248,12 +264,11 @@ var Zodream;
                     _this._shap.canDown = false;
                 }
             });
-            if (this._shap.point.y <= 0) {
-                this.close();
-                return new EndScene(this.stage, 0);
-            }
             this._shap.move();
             _super.prototype.update.call(this);
+            if (this._shap.point.y <= 0) {
+                this.navigate(new EndScene(), 0);
+            }
         };
         return GameScene;
     })(Scene);
@@ -283,8 +298,7 @@ var Zodream;
             this.addChild(btn);
         };
         EndScene.prototype._click = function () {
-            this.close();
-            new GameScene(this.stage);
+            this.navigate(new GameScene());
         };
         return EndScene;
     })(Scene);
