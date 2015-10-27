@@ -72,7 +72,15 @@ var Zodream;
             for (var _i = 0; _i < arguments.length; _i++) {
                 arg[_i - 0] = arguments[_i];
             }
-            (_a = this.stage.addChild).call.apply(_a, [this.stage].concat(arg));
+            (_a = this.stage).addChild.apply(_a, arg);
+            var _a;
+        };
+        Scene.prototype.removeChild = function () {
+            var arg = [];
+            for (var _i = 0; _i < arguments.length; _i++) {
+                arg[_i - 0] = arguments[_i];
+            }
+            (_a = this.stage).removeChild.apply(_a, arg);
             var _a;
         };
         Scene.prototype.setFPS = function (fps, mode) {
@@ -180,39 +188,48 @@ var Zodream;
         __extends(GameScene, _super);
         function GameScene() {
             _super.apply(this, arguments);
+            this._count = Math.ceil(Configs.width / 80) + 1;
         }
         GameScene.prototype.init = function () {
             _super.prototype.init.call(this);
             this._stones = new Array();
             this._coins = new Array();
+            this._index = 0;
             this._drawSky();
             this._drawShip();
-            for (var i = 0, count = Math.ceil(Configs.width / 80); i < count; i++) {
-                this._draw(i);
+            this._drawScore();
+            for (var i = 0; i < this._count; i++) {
+                this._draw(i * 80);
             }
             this.setFPS(30);
             this.addKeyEvent(this._keyDown.bind(this));
         };
-        GameScene.prototype._draw = function (arg) {
-            if (arg === void 0) { arg = 0; }
-            switch (Resources.models[0][arg]) {
+        GameScene.prototype._drawScore = function () {
+            this._score = new createjs.Text((0).toString(), 'bold 30px Courier New', '#ff0000');
+            this._score.y = 50;
+            this._score.x = 100;
+            this.addChild(this._score);
+        };
+        GameScene.prototype._draw = function (x) {
+            switch (Resources.models[0][this._index]) {
                 case 3:
-                    this._drawCoin(new Point(arg * 80 + 15, 300));
+                    this._drawCoin(new Point(x + 15, 300));
                 case 0:
                     break;
                 case 4:
-                    this._drawCoin(new Point(arg * 80 + 15, 300));
+                    this._drawCoin(new Point(x + 15, 300));
                 case 1:
-                    this._drawStone(new Point(arg * 80, 200));
+                    this._drawStone(new Point(x, 200));
                     break;
                 case 5:
-                    this._drawCoin(new Point(arg * 80 + 15, 350));
+                    this._drawCoin(new Point(x + 15, 350));
                 case 2:
-                    this._drawStone(new Point(arg * 80, 250), Resources.getImage("high"));
+                    this._drawStone(new Point(x, 250), Resources.getImage("high"));
                     break;
                 default:
                     break;
             }
+            this._index++;
         };
         GameScene.prototype._keyDown = function (event) {
             switch (event.keyCode) {
@@ -287,8 +304,11 @@ var Zodream;
         };
         GameScene.prototype.update = function () {
             var _this = this;
-            var bound = this._shap.getBounds();
-            this._stones.forEach(function (stone) {
+            var bound = this._shap.getBounds(), distance = this._shap.x - Configs.width / 2;
+            if (distance < 0) {
+                distance = 0;
+            }
+            this._stones.forEach(function (stone, i) {
                 if (bound.x + bound.width == stone.x && stone.y < bound.y + bound.height) {
                     _this._shap.energy = 0;
                 }
@@ -301,12 +321,43 @@ var Zodream;
                     _this._shap.canDown = false;
                     _this._shap.isSuspeed = false;
                 }
+                if (right < 0) {
+                    _this._draw(_this._count * 80 + stone.x);
+                    _this.removeChild(stone);
+                    _this._stones.splice(i, 1);
+                }
+                else {
+                    stone.x -= distance;
+                }
             });
+            this._coins.forEach(function (coin, i) {
+                if (coin.x <= 20 && coin.y <= 20) {
+                    _this._score.text = (parseInt(_this._score.text) + 50).toString();
+                    _this.removeChild(coin);
+                    _this._coins.splice(i, 1);
+                }
+                if (_this._ballCollide(bound, coin.getBounds())) {
+                    coin.move();
+                }
+                if (coin.x + coin.getBounds().width < 0) {
+                    _this.removeChild(coin);
+                    _this._coins.splice(i, 1);
+                }
+                else {
+                    coin.x -= distance;
+                }
+            });
+            this._shap.x -= distance;
             this._shap.move();
             _super.prototype.update.call(this);
             if (this._shap.point.y <= 0) {
-                this.navigate(new EndScene(), 0);
+                this.navigate(new EndScene(), this._score.text);
             }
+        };
+        GameScene.prototype._ballCollide = function (ball1, ball2) {
+            var centerX = ball1.x + ball1.width / 2, centerY = ball1.y + ball1.height / 2, radius = Math.min(ball1.width, ball1.height) / 2, center2X = ball2.x + ball2.width / 2, center2Y = ball2.y + ball2.height / 2, radius2 = Math.min(ball2.width, ball2.height) / 2;
+            var distance = Math.sqrt(Math.pow(centerX - center2X, 2) + Math.pow(centerY - center2Y, 2));
+            return distance < radius + radius2;
         };
         return GameScene;
     })(Scene);
@@ -318,14 +369,14 @@ var Zodream;
         }
         EndScene.prototype.init = function (arg) {
             _super.prototype.init.call(this);
-            this._score = arg;
-            this._drawScore();
+            this._drawScore(arg);
             this._drawBtn();
             this.setFPS(10);
         };
-        EndScene.prototype._drawScore = function () {
-            var lable = new createjs.Text(this._score.toString(), 'bold 14px Courier New', '#000000');
-            lable.y = 10;
+        EndScene.prototype._drawScore = function (arg) {
+            var lable = new createjs.Text(arg, 'bold 30px Courier New', '#ff0000');
+            lable.y = Configs.height / 2 - 50;
+            lable.x = Configs.width / 2 + 30;
             this.addChild(lable);
         };
         EndScene.prototype._drawBtn = function () {
@@ -543,6 +594,8 @@ var Zodream;
             _super.apply(this, arguments);
         }
         Coin.prototype.move = function (arg) {
+            if (arg === void 0) { arg = new Point(20, Configs.height - 20); }
+            createjs.Tween.get(this).to({ x: arg.getWorld().x, y: arg.getWorld().y }, 2000);
         };
         return Coin;
     })(Shape);
