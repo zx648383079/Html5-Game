@@ -184,24 +184,35 @@ var Zodream;
         GameScene.prototype.init = function () {
             _super.prototype.init.call(this);
             this._stones = new Array();
+            this._coins = new Array();
             this._drawSky();
             this._drawShip();
-            for (var i = 0; i < 20; i++) {
-                switch (Resources.models[0][i]) {
-                    case 0:
-                        break;
-                    case 1:
-                        this._drawStone(new Point(i * 80, 200));
-                        break;
-                    case 2:
-                        this._drawStone(new Point(i * 80, 250), Resources.getImage("high"));
-                        break;
-                    default:
-                        break;
-                }
+            for (var i = 0, count = Math.ceil(Configs.width / 80); i < count; i++) {
+                this._draw(i);
             }
             this.setFPS(30);
             this.addKeyEvent(this._keyDown.bind(this));
+        };
+        GameScene.prototype._draw = function (arg) {
+            if (arg === void 0) { arg = 0; }
+            switch (Resources.models[0][arg]) {
+                case 3:
+                    this._drawCoin(new Point(arg * 80 + 15, 300));
+                case 0:
+                    break;
+                case 4:
+                    this._drawCoin(new Point(arg * 80 + 15, 300));
+                case 1:
+                    this._drawStone(new Point(arg * 80, 200));
+                    break;
+                case 5:
+                    this._drawCoin(new Point(arg * 80 + 15, 350));
+                case 2:
+                    this._drawStone(new Point(arg * 80, 250), Resources.getImage("high"));
+                    break;
+                default:
+                    break;
+            }
         };
         GameScene.prototype._keyDown = function (event) {
             switch (event.keyCode) {
@@ -256,6 +267,14 @@ var Zodream;
             this._shap.setBounds(0, 264, 64, 64);
             this._shap.energy = 100;
             this.addChild(this._shap);
+        };
+        GameScene.prototype._drawCoin = function (point, arg) {
+            if (arg === void 0) { arg = Resources.getImage("coin"); }
+            var coin = new Coin();
+            coin.graphics.beginBitmapFill(arg).drawRect(0, 0, 50, 50);
+            coin.setBounds(point, 50, 50);
+            this.addChild(coin);
+            this._coins.push(coin);
         };
         GameScene.prototype._drawStone = function (point, arg) {
             if (arg === void 0) { arg = Resources.getImage("ground"); }
@@ -518,6 +537,16 @@ var Zodream;
         return Shape;
     })(createjs.Shape);
     Zodream.Shape = Shape;
+    var Coin = (function (_super) {
+        __extends(Coin, _super);
+        function Coin() {
+            _super.apply(this, arguments);
+        }
+        Coin.prototype.move = function (arg) {
+        };
+        return Coin;
+    })(Shape);
+    Zodream.Coin = Coin;
     var Configs = (function () {
         function Configs() {
         }
@@ -526,7 +555,7 @@ var Zodream;
             { src: "img/ground.png", id: "ground" },
             { src: "img/bg.png", id: "bg" },
             { src: "img/high.jpg", id: "high" },
-            { src: "img/coins.png", id: "coin" },
+            { src: "img/coin.png", id: "coin" },
             { src: "js/game.json", id: "model" }
         ];
         Configs.width = window.innerWidth;

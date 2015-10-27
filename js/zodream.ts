@@ -168,30 +168,43 @@ module Zodream {
 		
 		private _stones: Shape[];
 		
+		private _coins: Coin[];
+		
 		public init(): void {
 			super.init();
 			this._stones = new Array();	
-				
+			this._coins = new Array();
+			
 			this._drawSky();
 			this._drawShip();
 			
-			for (var i = 0; i < 20; i++) {
-				switch (Resources.models[0][i]) {
-					case 0:
-						break;
-					case 1:
-						this._drawStone( new Point( i * 80, 200) );
-						break;
-					case 2:
-						this._drawStone( new Point( i * 80, 250), Resources.getImage("high") );
-						break;
-					default:
-						break;
-				}
+			for (var i = 0, count = Math.ceil(Configs.width / 80); i < count; i++) {
+				this._draw(i);
 			}
 			
 			this.setFPS(30);
 			this.addKeyEvent(this._keyDown.bind(this));
+		}
+		
+		private _draw(arg: number = 0) {
+			switch (Resources.models[0][arg]) {
+				case 3:
+					this._drawCoin(new Point( arg * 80 + 15, 300 ) );
+				case 0:
+					break;
+				case 4:
+					this._drawCoin(new Point( arg * 80 + 15, 300 ) );
+				case 1:
+					this._drawStone( new Point( arg * 80, 200 ) );
+					break;
+				case 5:
+					this._drawCoin(new Point( arg * 80 + 15, 350 ) );
+				case 2:
+					this._drawStone( new Point( arg * 80, 250 ), Resources.getImage( "high" ) );
+					break;
+				default:
+					break;
+			}
 		}
 		
 		private _keyDown(event: any): void{
@@ -249,6 +262,14 @@ module Zodream {
 			this._shap.energy = 100;			
 			//this._shap.setTransform( 60, 60, 1.5, 1.5);
 			this.addChild(this._shap);
+		}
+		
+		private _drawCoin(point: Point, arg: HTMLImageElement = Resources.getImage("coin")): void {
+			var coin = new Coin();
+			coin.graphics.beginBitmapFill( arg ).drawRect(0, 0, 50 , 50);
+			coin.setBounds( point , 50 , 50 );
+			this.addChild(coin);
+			this._coins.push(coin);		
 		}
 		
 		private _drawStone(point: Point, arg: HTMLImageElement = Resources.getImage("ground")): void {
@@ -501,13 +522,19 @@ module Zodream {
 		}
 	}
 	
+	export class Coin extends Shape {
+		public move(arg: Point) {
+			
+		}
+	}
+	
 	export class Configs {
 		public static resources: any[] = [
 			{src:"img/man.png" , id:"man"},
 			{src:"img/ground.png" , id:"ground"},
 			{src:"img/bg.png" , id:"bg"},
 			{src:"img/high.jpg" , id:"high"},
-			{src:"img/coins.png" , id:"coin"},
+			{src:"img/coin.png" , id:"coin"},
 			{src:"js/game.json" , id:"model"}
 		];
 		
