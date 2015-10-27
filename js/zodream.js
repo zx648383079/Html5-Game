@@ -280,6 +280,7 @@ var Zodream;
                         bound.x + bound.width < right)) &&
                     bound.y + bound.height >= stone.y) {
                     _this._shap.canDown = false;
+                    _this._shap.isSuspeed = false;
                 }
             });
             this._shap.move();
@@ -329,6 +330,7 @@ var Zodream;
             this._energy = 0;
             this.gravity = 2;
             this._lift = 0;
+            this.isSuspeed = true;
             this.canDown = true;
         }
         Object.defineProperty(Person.prototype, "point", {
@@ -406,11 +408,10 @@ var Zodream;
                 return this._lift;
             },
             set: function (arg) {
-                if (this._lift < 100) {
+                if (!this.isSuspeed) {
                     this._lift += arg;
-                    console.log(arg, this._lift);
+                    this.isSuspeed = true;
                 }
-                console.log(this._lift);
             },
             enumerable: true,
             configurable: true

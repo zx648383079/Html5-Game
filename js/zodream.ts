@@ -273,6 +273,7 @@ module Zodream {
 					bound.x + bound.width < right) ) && 
 					bound.y + bound.height >= stone.y ) {
 					this._shap.canDown = false;
+					this._shap.isSuspeed = false;
 				}
 			});
 			this._shap.move();			
@@ -386,15 +387,18 @@ module Zodream {
 		
 		public gravity: number = 2;    // 重力
 		
-		private _lift: number = 0;       //升力
+		private _lift: number = 0;     //升力
+		
+		public isSuspeed: boolean = true;      //判断是否是悬浮状态
 		
 		get lift(): number {
 			return this._lift;
 		}
 		
 		set lift(arg: number) {
-			if(this._lift < 100) {
+			if(!this.isSuspeed) {
 				this._lift += arg;
+				this.isSuspeed = true;
 			}
 		}
 		
