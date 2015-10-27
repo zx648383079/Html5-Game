@@ -189,7 +189,7 @@ module Zodream {
 		private _draw(arg: number = 0) {
 			switch (Resources.models[0][arg]) {
 				case 3:
-					this._drawCoin(new Point( arg * 80 + 15, 300 ) );
+					this._drawCoin( new Point( arg * 80 + 15, 300 ) );
 				case 0:
 					break;
 				case 4:
@@ -523,7 +523,7 @@ module Zodream {
 	}
 	
 	export class Coin extends Shape {
-		public move(arg: Point) {
+		public move( arg: Point = new Point( 20, Configs.height - 20 ) ) {
 			
 		}
 	}
