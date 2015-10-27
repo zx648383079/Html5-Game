@@ -305,9 +305,11 @@ var Zodream;
         GameScene.prototype.update = function () {
             var _this = this;
             var bound = this._shap.getBounds(), distance = this._shap.x - Configs.width / 2;
-            if (distance < 0) {
+            if (distance < 0 || this._index >= Resources.models[0].length) {
                 distance = 0;
             }
+            bound.x += 10;
+            bound.width -= 20;
             this._stones.forEach(function (stone, i) {
                 if (bound.x + bound.width == stone.x && stone.y < bound.y + bound.height) {
                     _this._shap.energy = 0;
@@ -336,7 +338,7 @@ var Zodream;
                     _this.removeChild(coin);
                     _this._coins.splice(i, 1);
                 }
-                if (_this._ballCollide(bound, coin.getBounds())) {
+                if (_this._collide(bound, coin.getBounds())) {
                     coin.move();
                 }
                 if (coin.x + coin.getBounds().width < 0) {
@@ -354,10 +356,12 @@ var Zodream;
                 this.navigate(new EndScene(), this._score.text);
             }
         };
-        GameScene.prototype._ballCollide = function (ball1, ball2) {
-            var centerX = ball1.x + ball1.width / 2, centerY = ball1.y + ball1.height / 2, radius = Math.min(ball1.width, ball1.height) / 2, center2X = ball2.x + ball2.width / 2, center2Y = ball2.y + ball2.height / 2, radius2 = Math.min(ball2.width, ball2.height) / 2;
-            var distance = Math.sqrt(Math.pow(centerX - center2X, 2) + Math.pow(centerY - center2Y, 2));
-            return distance < radius + radius2;
+        GameScene.prototype._collide = function (rect, ball) {
+            var centerX = ball.x + ball.width / 2, centerY = ball.y + ball.height / 2, radius = Math.min(ball.width, ball.height) / 2, rectCenterX = rect.x + rect.width / 2, rectCenterY = rect.y + rect.height / 2;
+            return (Math.abs(centerX - rectCenterX) <= radius + rect.width / 2 &&
+                centerY <= rect.y && centerY >= rect.y + rect.height) ||
+                (Math.abs(centerY - rectCenterY) <= radius + rect.height / 2 &&
+                    centerX >= rect.x && centerX <= rect.x + rect.width);
         };
         return GameScene;
     })(Scene);

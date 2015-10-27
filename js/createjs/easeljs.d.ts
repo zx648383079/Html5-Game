@@ -869,7 +869,7 @@ declare module createjs {
 
         // properties
         autoClear: boolean;
-        canvas: HTMLCanvasElement;
+        canvas: HTMLCanvasElement | Object;
         drawRect: Rectangle;
         handleEvent: Function;
         mouseInBounds: boolean;
