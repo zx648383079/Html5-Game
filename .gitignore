@@ -48,3 +48,6 @@ script/
 .settings/
 cocosstudio/
 tools/
+
+# vscode
+typings/

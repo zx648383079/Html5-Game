@@ -1,5 +1,3 @@
-///<reference path="createjs/createjs.d.ts"/>
-
 module Zodream {
 	export class App {
 		public static main (arg : string | HTMLCanvasElement): Program {

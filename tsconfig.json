@@ -1,14 +1,6 @@
 {
 	"compilerOptions": {
 		"target": "ES5",
-		"module": "commonjs",
-		"noImplicitAny": true,
-		"removeComments": true,
-		"preserveConstEnums": true,
-		"out": "js/zodream.js",
 		"sourceMap": true
-	},
-	"files": [
-		"js/zodream.ts"	
-	]
+	}
 }

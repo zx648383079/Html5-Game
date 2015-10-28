@@ -1,4 +1,3 @@
-///<reference path="createjs/createjs.d.ts"/>
 var __extends = (this && this.__extends) || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
@@ -188,7 +187,7 @@ var Zodream;
         __extends(GameScene, _super);
         function GameScene() {
             _super.apply(this, arguments);
-            this._count = Math.ceil(Configs.width / 80) + 1;
+            this._count = Math.ceil(Configs.width / 80) + 1; //一屏台阶的数目
         }
         GameScene.prototype.init = function () {
             _super.prototype.init.call(this);
@@ -285,6 +284,7 @@ var Zodream;
             this._shap.framerate = 13;
             this._shap.setBound(0, Configs.height, 64, 64);
             this._shap.energy = 100;
+            //this._shap.setTransform( 60, 60, 1.5, 1.5);
             this.addChild(this._shap);
         };
         GameScene.prototype._drawCoin = function (point, arg) {
@@ -360,10 +360,18 @@ var Zodream;
                 this.navigate(new EndScene(), this._score.text);
             }
         };
+        /**
+         * 矩形与圆的碰撞检测
+         * 来源：http://bbs.9ria.com/thread-137642-1-1.html
+         */
         GameScene.prototype._collide = function (ball, rect) {
             var rx = ball.x - (rect.x + rect.width / 2), ry = ball.y - (rect.y + rect.height / 2), dx = Math.min(rx, rect.width / 2), dx1 = Math.max(dx, -rect.width / 2), dy = Math.min(ry, rect.height / 2), dy1 = Math.max(dy, -rect.height / 2);
             return Math.pow(dx1 - rx, 2) + Math.pow(dy1 - ry, 2) <= Math.pow(ball.radius, 2);
         };
+        /**
+         * 矩形与圆的碰撞检测
+         *
+         */
         GameScene.prototype._ballCollideRect = function (ball, rect) {
             if (ball.x < rect.x && ball.y < rect.y) {
                 return Math.pow(ball.x - rect.x, 2) + Math.pow(ball.y - rect.y, 2) <
@@ -386,12 +394,20 @@ var Zodream;
                     (Math.abs(ball.y - rect.y - rect.height / 2) < ball.radius + rect.height / 2);
             }
         };
+        /**
+         * 矩形之间的碰撞检测
+         *
+         */
         GameScene.prototype._rectCollide = function (rect1, rect2) {
             return rect1.x + rect1.width > rect2.x &&
                 rect1.x < rect2.x + rect2.width &&
                 rect1.y + rect1.height > rect2.y &&
                 rect1.y < rect2.y + rect2.height;
         };
+        /**
+         * 圆之间的碰撞检测
+         *
+         */
         GameScene.prototype._ballCollide = function (ball1, ball2) {
             return Math.pow(ball1.x - ball2.x, 2) +
                 Math.pow(ball1.y - ball2.y, 2) <
@@ -436,9 +452,9 @@ var Zodream;
             _super.apply(this, arguments);
             this.speed = 2;
             this._energy = 0;
-            this.gravity = 2;
-            this._lift = 0;
-            this.isSuspeed = true;
+            this.gravity = 2; // 重力
+            this._lift = 0; //升力
+            this.isSuspeed = true; //判断是否是悬浮状态
             this.canDown = true;
         }
         Object.defineProperty(Person.prototype, "point", {
