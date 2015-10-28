@@ -282,7 +282,7 @@ module Zodream {
 			});
 			this._shap = new Person(manSpriteSheet , "run");
 			this._shap.framerate = 13;
-			this._shap.setBounds( 0, Configs.height , 64, 64);
+			this._shap.setBound( 0, Configs.height , 64, 64);
 			this._shap.energy = 100;			
 			//this._shap.setTransform( 60, 60, 1.5, 1.5);
 			this.addChild(this._shap);
@@ -291,7 +291,7 @@ module Zodream {
 		private _drawCoin(point: Point, arg: HTMLImageElement = Resources.getImage("coin")): void {
 			var coin = new Coin();
 			coin.graphics.beginBitmapFill( arg ).drawRect(0, 0, 50 , 50);
-			coin.setBounds( point , 50 , 50 );
+			coin.setBound( point , 50 , 50 );
 			this.addChild(coin);
 			this._coins.push(coin);		
 		}
@@ -299,26 +299,26 @@ module Zodream {
 		private _drawStone(point: Point, arg: HTMLImageElement = Resources.getImage("ground")): void {
 			var stone = new Shape();
 			stone.graphics.beginBitmapFill( arg ).drawRect(0, 0, 80 , arg.height);
-			stone.setBounds( point , 80 , point.y );
+			stone.setBound( point , 80 , point.y );
 			stone.scaleY = stone.point.y / arg.height;
 			this.addChild(stone);
 			this._stones.push(stone);		
 		}
 		
 		protected update(): void {
-			var bound = this._shap.getBounds(),
-				distance = this._shap.x - Configs.width / 2 ;
-			if(distance < 0 || this._index > Resources.models[0].length) {
-				distance = 0;
+			var bound = this._shap.getBound(),
+				distance = 0 ;
+			if(this._shap.x - Configs.width / 2 > 0 && this._index <= Resources.models[0].length) {
+				distance = 2;
 			}
 			this._distance += distance;
 			bound.x += 20;
 			bound.width -= 40;
-			this._stones.forEach( (stone, i) => {
-				if(bound.x + bound.width == stone.x && stone.y < bound.y + bound.height) {
+			this._stones.forEach( (stone) => {
+				if(bound.x + bound.width == stone.x && stone.y < bound.y + bound.height - 1) {
 					this._shap.energy = 0;
 				}
-				var right = stone.x + stone.getBounds().width;
+				var right = stone.x + stone.getBound().width;
 				if( ( (bound.x > stone.x && 
 					bound.x < right ) || 
 					(bound.x + bound.width > stone.x && 
@@ -327,14 +327,15 @@ module Zodream {
 					this._shap.canDown = false;
 					this._shap.isSuspeed = false;
 				}
-				if( right <= 0 ) {
-					this.removeChild( stone );
-					this._stones.splice( i, 1 );
-					this._draw();					
+				if(right <= 0) {
+					this.removeChild( this._stones.shift() );
 				}else {
-					stone.x -= distance;									
+					stone.x -= distance;					
 				}
 			});
+			if( this._distance > 0 && this._distance % 80 == 0) {
+				this._draw();		
+			}
 			
 			this._coins.forEach( (coin, i) => {
 				if(coin.x <= 20 && coin.y <= 20) {
@@ -342,10 +343,10 @@ module Zodream {
 					this.removeChild(coin);
 					this._coins.splice(i, 1);
 				}
-				if(this._collide( bound , coin.getBounds())) {
+				if(this._ballCollideRect(coin.getBall() , bound )) {
 					coin.move();
 				}
-				if( coin.x + coin.getBounds().width < 0) {
+				if( coin.x + coin.getBound().width < 0) {
 					this.removeChild( coin );
 					this._coins.splice( i, 1 );
 				}else {
@@ -365,17 +366,58 @@ module Zodream {
 		 * 矩形与圆的碰撞检测
 		 * 来源：http://bbs.9ria.com/thread-137642-1-1.html
 		 */
-		private _collide( rect: any, ball: any): boolean {
-			var centerX = ball.x + ball.width / 2,
-				centerY = ball.y + ball.height / 2,
-				radius = Math.min( ball.width, ball.height ) / 2,
-				rx = centerX - (rect.x + rect.width / 2),
-                ry = centerY - (rect.y + rect.height / 2),
+		private _collide( ball: Ball, rect: Bound ): boolean {
+			var rx = ball.x - (rect.x + rect.width / 2),
+                ry = ball.y - (rect.y + rect.height / 2),
 				dx = Math.min( rx, rect.width / 2),
                 dx1 = Math.max( dx, -rect.width / 2),
                 dy = Math.min( ry, rect.height / 2),
                 dy1 = Math.max( dy, -rect.height / 2);
-            return (dx1 - rx) * ( dx1 - rx ) + ( dy1 - ry ) * ( dy1 - ry ) <= radius * radius;
+            return Math.pow(dx1 - rx, 2) + Math.pow( dy1 - ry , 2) <= Math.pow(ball.radius, 2);
+		}
+		
+		/**
+		 * 矩形与圆的碰撞检测
+		 * 
+		 */
+		private _ballCollideRect(ball: Ball, rect: Bound): boolean {
+			if(ball.x < rect.x && ball.y < rect.y) {
+				return Math.pow(ball.x - rect.x, 2) + Math.pow(ball.y - rect.y, 2) < 
+						Math.pow(ball.radius, 2);
+			}else if(ball.x < rect.x && ball.y > rect.y + rect.height) {
+				return Math.pow(ball.x - rect.x, 2) + Math.pow(ball.y - rect.y - rect.height, 2) < 
+						Math.pow(ball.radius, 2);
+			}else if(ball.x > rect.x + rect.width && ball.y < rect.y) {
+				return Math.pow(ball.x - rect.x - rect.width, 2) + Math.pow(ball.y - rect.y, 2) < 
+						Math.pow(ball.radius, 2);
+			}else if(ball.x > rect.x + rect.width && ball.y > rect.y + rect.height) {
+				return Math.pow(ball.x - rect.x - rect.width, 2) + Math.pow(ball.y - rect.y - rect.height, 2) < 
+						Math.pow(ball.radius, 2);
+			}else{
+				return (Math.abs( ball.x - rect.x - rect.width / 2 ) < ball.radius + rect.width / 2) && 
+						(Math.abs( ball.y - rect.y - rect.height / 2) < ball.radius + rect.height / 2);
+			}
+		}
+		
+		/**
+		 * 矩形之间的碰撞检测
+		 * 
+		 */
+		private _rectCollide(rect1: Bound, rect2: Bound): boolean {
+			return rect1.x + rect1.width > rect2.x && 
+					rect1.x < rect2.x + rect2.width &&
+					rect1.y + rect1.height > rect2.y &&
+					rect1.y < rect2.y + rect2.height;
+		}
+		
+		/**
+		 * 圆之间的碰撞检测
+		 * 
+		 */
+		private _ballCollide(ball1: Ball, ball2: Ball): boolean {
+			return Math.pow(ball1.x - ball2.x , 2) + 
+					Math.pow(ball1.y - ball2.y, 2) < 
+					Math.pow(ball1.radius + ball2.radius, 2);
 		}
 	}
 	
@@ -432,7 +474,7 @@ module Zodream {
 			return this._size;
 		}
 		
-		public setBounds(x: number | Point, y: number | Size, width?: number | Size, height?: number) {
+		public setBound(x: number | Point, y: number | Size, width?: number | Size, height?: number) {
 			if(x instanceof Point) {
 				this.point = <Point>x;
 				if(y instanceof Size) {
@@ -450,19 +492,14 @@ module Zodream {
 			}
 		}
 		
-		public getBounds(): any {
-			return {
-				x: this.x,
-				y: this.y,
-				width: this.size.width,
-				height: this.size.height
-			};
+		public getBound(): Bound {
+			return new Bound( this.x, this.y, this.size.width, this.size.height);
 		}
 		
 		public speed: number = 2;
 		
 		private _energy: number = 0;
-		
+				
 		get energy(): number {
 			return this._energy;
 		}
@@ -529,7 +566,7 @@ module Zodream {
 				}
 			}
 			
-			if(this._energy == 0) {
+			if(this._energy == 0 && !this.canDown ) {
 				this.animation("stop");
 			} 
 			
@@ -566,7 +603,7 @@ module Zodream {
 			return this._size;
 		}
 		
-		public setBounds(x: number | Point, y: number | Size, width?: number | Size, height?: number) {
+		public setBound(x: number | Point, y: number | Size, width?: number | Size, height?: number) {
 			if(x instanceof Point) {
 				this.point = <Point>x;
 				if(y instanceof Size) {
@@ -584,19 +621,18 @@ module Zodream {
 			}
 		}
 		
-		public getBounds(): any {
-			return {
-				x: this.x,
-				y: this.y,
-				width: this.size.width,
-				height: this.size.height
-			};
+		public getBound(): Bound {
+			return new Bound(this.x, this.y, this.size.width, this.size.height);
 		}
 	}
 	
 	export class Coin extends Shape {
+		public getBall(): Ball {
+			return new Ball(this.x, this.y, Math.min(this.size.width, this.size.height) / 2 );
+		}
+		
 		public move( arg: Point = new Point( 20, Configs.height - 20 ) ) {
-			createjs.Tween.get(this).to({x: arg.getWorld().x, y: arg.getWorld().y}, 2000);
+			createjs.Tween.get(this).to({x: arg.getWorld().x, y: arg.getWorld().y}, 1000);
 		}
 	}
 	
@@ -666,6 +702,25 @@ module Zodream {
 				x: this.x,
 				y: Configs.height - this.y
 			};
+		}
+	}
+	
+	export class Bound {
+		constructor(
+			public x?: number,
+			public y?: number,
+			public width?: number,
+			public height?: number
+		) {
+		}
+	}
+	
+	export class Ball {
+		constructor(
+			public x?: number,			
+			public y?: number,
+			public radius?: number								
+		){
 		}
 	}
 	

@@ -283,7 +283,7 @@ var Zodream;
             });
             this._shap = new Person(manSpriteSheet, "run");
             this._shap.framerate = 13;
-            this._shap.setBounds(0, Configs.height, 64, 64);
+            this._shap.setBound(0, Configs.height, 64, 64);
             this._shap.energy = 100;
             this.addChild(this._shap);
         };
@@ -291,7 +291,7 @@ var Zodream;
             if (arg === void 0) { arg = Resources.getImage("coin"); }
             var coin = new Coin();
             coin.graphics.beginBitmapFill(arg).drawRect(0, 0, 50, 50);
-            coin.setBounds(point, 50, 50);
+            coin.setBound(point, 50, 50);
             this.addChild(coin);
             this._coins.push(coin);
         };
@@ -299,25 +299,25 @@ var Zodream;
             if (arg === void 0) { arg = Resources.getImage("ground"); }
             var stone = new Shape();
             stone.graphics.beginBitmapFill(arg).drawRect(0, 0, 80, arg.height);
-            stone.setBounds(point, 80, point.y);
+            stone.setBound(point, 80, point.y);
             stone.scaleY = stone.point.y / arg.height;
             this.addChild(stone);
             this._stones.push(stone);
         };
         GameScene.prototype.update = function () {
             var _this = this;
-            var bound = this._shap.getBounds(), distance = this._shap.x - Configs.width / 2;
-            if (distance < 0 || this._index > Resources.models[0].length) {
-                distance = 0;
+            var bound = this._shap.getBound(), distance = 0;
+            if (this._shap.x - Configs.width / 2 > 0 && this._index <= Resources.models[0].length) {
+                distance = 2;
             }
             this._distance += distance;
             bound.x += 20;
             bound.width -= 40;
-            this._stones.forEach(function (stone, i) {
-                if (bound.x + bound.width == stone.x && stone.y < bound.y + bound.height) {
+            this._stones.forEach(function (stone) {
+                if (bound.x + bound.width == stone.x && stone.y < bound.y + bound.height - 1) {
                     _this._shap.energy = 0;
                 }
-                var right = stone.x + stone.getBounds().width;
+                var right = stone.x + stone.getBound().width;
                 if (((bound.x > stone.x &&
                     bound.x < right) ||
                     (bound.x + bound.width > stone.x &&
@@ -327,24 +327,25 @@ var Zodream;
                     _this._shap.isSuspeed = false;
                 }
                 if (right <= 0) {
-                    _this.removeChild(stone);
-                    _this._stones.splice(i, 1);
-                    _this._draw();
+                    _this.removeChild(_this._stones.shift());
                 }
                 else {
                     stone.x -= distance;
                 }
             });
+            if (this._distance > 0 && this._distance % 80 == 0) {
+                this._draw();
+            }
             this._coins.forEach(function (coin, i) {
                 if (coin.x <= 20 && coin.y <= 20) {
                     _this._score.text = (parseInt(_this._score.text) + 50).toString();
                     _this.removeChild(coin);
                     _this._coins.splice(i, 1);
                 }
-                if (_this._collide(bound, coin.getBounds())) {
+                if (_this._ballCollideRect(coin.getBall(), bound)) {
                     coin.move();
                 }
-                if (coin.x + coin.getBounds().width < 0) {
+                if (coin.x + coin.getBound().width < 0) {
                     _this.removeChild(coin);
                     _this._coins.splice(i, 1);
                 }
@@ -359,9 +360,42 @@ var Zodream;
                 this.navigate(new EndScene(), this._score.text);
             }
         };
-        GameScene.prototype._collide = function (rect, ball) {
-            var centerX = ball.x + ball.width / 2, centerY = ball.y + ball.height / 2, radius = Math.min(ball.width, ball.height) / 2, rx = centerX - (rect.x + rect.width / 2), ry = centerY - (rect.y + rect.height / 2), dx = Math.min(rx, rect.width / 2), dx1 = Math.max(dx, -rect.width / 2), dy = Math.min(ry, rect.height / 2), dy1 = Math.max(dy, -rect.height / 2);
-            return (dx1 - rx) * (dx1 - rx) + (dy1 - ry) * (dy1 - ry) <= radius * radius;
+        GameScene.prototype._collide = function (ball, rect) {
+            var rx = ball.x - (rect.x + rect.width / 2), ry = ball.y - (rect.y + rect.height / 2), dx = Math.min(rx, rect.width / 2), dx1 = Math.max(dx, -rect.width / 2), dy = Math.min(ry, rect.height / 2), dy1 = Math.max(dy, -rect.height / 2);
+            return Math.pow(dx1 - rx, 2) + Math.pow(dy1 - ry, 2) <= Math.pow(ball.radius, 2);
+        };
+        GameScene.prototype._ballCollideRect = function (ball, rect) {
+            if (ball.x < rect.x && ball.y < rect.y) {
+                return Math.pow(ball.x - rect.x, 2) + Math.pow(ball.y - rect.y, 2) <
+                    Math.pow(ball.radius, 2);
+            }
+            else if (ball.x < rect.x && ball.y > rect.y + rect.height) {
+                return Math.pow(ball.x - rect.x, 2) + Math.pow(ball.y - rect.y - rect.height, 2) <
+                    Math.pow(ball.radius, 2);
+            }
+            else if (ball.x > rect.x + rect.width && ball.y < rect.y) {
+                return Math.pow(ball.x - rect.x - rect.width, 2) + Math.pow(ball.y - rect.y, 2) <
+                    Math.pow(ball.radius, 2);
+            }
+            else if (ball.x > rect.x + rect.width && ball.y > rect.y + rect.height) {
+                return Math.pow(ball.x - rect.x - rect.width, 2) + Math.pow(ball.y - rect.y - rect.height, 2) <
+                    Math.pow(ball.radius, 2);
+            }
+            else {
+                return (Math.abs(ball.x - rect.x - rect.width / 2) < ball.radius + rect.width / 2) &&
+                    (Math.abs(ball.y - rect.y - rect.height / 2) < ball.radius + rect.height / 2);
+            }
+        };
+        GameScene.prototype._rectCollide = function (rect1, rect2) {
+            return rect1.x + rect1.width > rect2.x &&
+                rect1.x < rect2.x + rect2.width &&
+                rect1.y + rect1.height > rect2.y &&
+                rect1.y < rect2.y + rect2.height;
+        };
+        GameScene.prototype._ballCollide = function (ball1, ball2) {
+            return Math.pow(ball1.x - ball2.x, 2) +
+                Math.pow(ball1.y - ball2.y, 2) <
+                Math.pow(ball1.radius + ball2.radius, 2);
         };
         return GameScene;
     })(Scene);
@@ -431,7 +465,7 @@ var Zodream;
             enumerable: true,
             configurable: true
         });
-        Person.prototype.setBounds = function (x, y, width, height) {
+        Person.prototype.setBound = function (x, y, width, height) {
             if (x instanceof Point) {
                 this.point = x;
                 if (y instanceof Size) {
@@ -451,13 +485,8 @@ var Zodream;
                 }
             }
         };
-        Person.prototype.getBounds = function () {
-            return {
-                x: this.x,
-                y: this.y,
-                width: this.size.width,
-                height: this.size.height
-            };
+        Person.prototype.getBound = function () {
+            return new Bound(this.x, this.y, this.size.width, this.size.height);
         };
         Object.defineProperty(Person.prototype, "energy", {
             get: function () {
@@ -522,7 +551,7 @@ var Zodream;
                     this._energy = 0;
                 }
             }
-            if (this._energy == 0) {
+            if (this._energy == 0 && !this.canDown) {
                 this.animation("stop");
             }
             if (this.canDown && this._lift == 0) {
@@ -562,7 +591,7 @@ var Zodream;
             enumerable: true,
             configurable: true
         });
-        Shape.prototype.setBounds = function (x, y, width, height) {
+        Shape.prototype.setBound = function (x, y, width, height) {
             if (x instanceof Point) {
                 this.point = x;
                 if (y instanceof Size) {
@@ -582,13 +611,8 @@ var Zodream;
                 }
             }
         };
-        Shape.prototype.getBounds = function () {
-            return {
-                x: this.x,
-                y: this.y,
-                width: this.size.width,
-                height: this.size.height
-            };
+        Shape.prototype.getBound = function () {
+            return new Bound(this.x, this.y, this.size.width, this.size.height);
         };
         return Shape;
     })(createjs.Shape);
@@ -598,9 +622,12 @@ var Zodream;
         function Coin() {
             _super.apply(this, arguments);
         }
+        Coin.prototype.getBall = function () {
+            return new Ball(this.x, this.y, Math.min(this.size.width, this.size.height) / 2);
+        };
         Coin.prototype.move = function (arg) {
             if (arg === void 0) { arg = new Point(20, Configs.height - 20); }
-            createjs.Tween.get(this).to({ x: arg.getWorld().x, y: arg.getWorld().y }, 2000);
+            createjs.Tween.get(this).to({ x: arg.getWorld().x, y: arg.getWorld().y }, 1000);
         };
         return Coin;
     })(Shape);
@@ -666,6 +693,25 @@ var Zodream;
         return Point;
     })();
     Zodream.Point = Point;
+    var Bound = (function () {
+        function Bound(x, y, width, height) {
+            this.x = x;
+            this.y = y;
+            this.width = width;
+            this.height = height;
+        }
+        return Bound;
+    })();
+    Zodream.Bound = Bound;
+    var Ball = (function () {
+        function Ball(x, y, radius) {
+            this.x = x;
+            this.y = y;
+            this.radius = radius;
+        }
+        return Ball;
+    })();
+    Zodream.Ball = Ball;
     var Size = (function () {
         function Size(width, height) {
             this.width = width;
