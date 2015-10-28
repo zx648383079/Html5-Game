@@ -180,18 +180,21 @@ module Zodream {
 		
 		private _count: number = Math.ceil(Configs.width / 80) + 1;         //一屏台阶的数目
 		
+		private _distance: number;
+		
 		public init(): void {
 			super.init();
 			this._stones = new Array();	
 			this._coins = new Array();
 			this._index = 0;
+			this._distance = 0;
 			
 			this._drawSky();
 			this._drawShip();
 			this._drawScore();
 			
 			for (var i = 0; i < this._count ; i++) {
-				this._draw( i * 80 );			
+				this._draw();
 			}
 			
 			this.setFPS(30);
@@ -205,21 +208,22 @@ module Zodream {
 			this.addChild(this._score);
 		}
 		
-		private _draw(x: number) {
+		private _draw() {
+			var x = this._index * 80 - this._distance;
 			switch (Resources.models[0][this._index]) {
 				case 3:
-					this._drawCoin( new Point( x + 15, 300 ) );
+					this._drawCoin( new Point( x + 15,  Configs.stoneHeight + 100 ) );
 				case 0:
 					break;
 				case 4:
-					this._drawCoin(new Point( x + 15, 300 ) );
+					this._drawCoin(new Point( x + 15, Configs.stoneHeight + 100 ) );
 				case 1:
-					this._drawStone( new Point( x , 200 ) );
+					this._drawStone( new Point( x , Configs.stoneHeight ) );
 					break;
 				case 5:
-					this._drawCoin(new Point( x + 15, 350 ) );
+					this._drawCoin(new Point( x + 15, Configs.stoneHeight + 150 ) );
 				case 2:
-					this._drawStone( new Point( x , 250 ), Resources.getImage( "high" ) );
+					this._drawStone( new Point( x , Configs.stoneHeight + 50 ), Resources.getImage( "high" ) );
 					break;
 				default:
 					break;
@@ -244,8 +248,8 @@ module Zodream {
 		
 		private _drawSky(arg: HTMLImageElement = Resources.getImage("bg")): void {
 			var sky = new createjs.Shape();
-			sky.graphics.beginBitmapFill( arg ).drawRect(0, 0, Configs.width, Configs.height);
-			sky.setTransform(0, 0, 1 , Configs.height / arg.height);
+			sky.graphics.beginBitmapFill( arg ).drawRect(0, 0, arg.width, arg.height);
+			sky.setTransform(0, 0, Configs.width / arg.width , Configs.height / arg.height);
 			this.addChild(sky);
 		}
 		
@@ -278,7 +282,7 @@ module Zodream {
 			});
 			this._shap = new Person(manSpriteSheet , "run");
 			this._shap.framerate = 13;
-			this._shap.setBounds( 0, 264, 64, 64);
+			this._shap.setBounds( 0, Configs.height , 64, 64);
 			this._shap.energy = 100;			
 			//this._shap.setTransform( 60, 60, 1.5, 1.5);
 			this.addChild(this._shap);
@@ -295,7 +299,7 @@ module Zodream {
 		private _drawStone(point: Point, arg: HTMLImageElement = Resources.getImage("ground")): void {
 			var stone = new Shape();
 			stone.graphics.beginBitmapFill( arg ).drawRect(0, 0, 80 , arg.height);
-			stone.setBounds( point , 80 , 200 );
+			stone.setBounds( point , 80 , point.y );
 			stone.scaleY = stone.point.y / arg.height;
 			this.addChild(stone);
 			this._stones.push(stone);		
@@ -304,11 +308,12 @@ module Zodream {
 		protected update(): void {
 			var bound = this._shap.getBounds(),
 				distance = this._shap.x - Configs.width / 2 ;
-			if(distance < 0 || this._index >= Resources.models[0].length) {
+			if(distance < 0 || this._index > Resources.models[0].length) {
 				distance = 0;
 			}
-			bound.x += 10;
-			bound.width -= 20;
+			this._distance += distance;
+			bound.x += 20;
+			bound.width -= 40;
 			this._stones.forEach( (stone, i) => {
 				if(bound.x + bound.width == stone.x && stone.y < bound.y + bound.height) {
 					this._shap.energy = 0;
@@ -322,14 +327,15 @@ module Zodream {
 					this._shap.canDown = false;
 					this._shap.isSuspeed = false;
 				}
-				if( right < 0 ) {
-					this._draw( this._count * 80 + stone.x);
+				if( right <= 0 ) {
 					this.removeChild( stone );
 					this._stones.splice( i, 1 );
+					this._draw();					
 				}else {
 					stone.x -= distance;									
 				}
 			});
+			
 			this._coins.forEach( (coin, i) => {
 				if(coin.x <= 20 && coin.y <= 20) {
 					this._score.text = (parseInt(this._score.text) + 50 ).toString();
@@ -351,21 +357,25 @@ module Zodream {
 					
 			super.update();
 			
-			if(this._shap.point.y <= 0) {
+			if(this._shap.point.y <= 0 || this._shap.x >= Configs.width - 64) {
 				this.navigate( new EndScene(), this._score.text);
 			}
 		}
-		
+		/**
+		 * 矩形与圆的碰撞检测
+		 * 来源：http://bbs.9ria.com/thread-137642-1-1.html
+		 */
 		private _collide( rect: any, ball: any): boolean {
 			var centerX = ball.x + ball.width / 2,
 				centerY = ball.y + ball.height / 2,
 				radius = Math.min( ball.width, ball.height ) / 2,
-				rectCenterX = rect.x + rect.width / 2,
-				rectCenterY = rect.y + rect.height / 2;
-			return (Math.abs( centerX - rectCenterX ) <= radius + rect.width / 2 && 
-					centerY <= rect.y && centerY >= rect.y + rect.height ) || 
-					(Math.abs( centerY - rectCenterY ) <= radius + rect.height / 2 && 
-					centerX >= rect.x && centerX <= rect.x + rect.width);
+				rx = centerX - (rect.x + rect.width / 2),
+                ry = centerY - (rect.y + rect.height / 2),
+				dx = Math.min( rx, rect.width / 2),
+                dx1 = Math.max( dx, -rect.width / 2),
+                dy = Math.min( ry, rect.height / 2),
+                dy1 = Math.max( dy, -rect.height / 2);
+            return (dx1 - rx) * ( dx1 - rx ) + ( dy1 - ry ) * ( dy1 - ry ) <= radius * radius;
 		}
 	}
 	
@@ -502,25 +512,26 @@ module Zodream {
 					this.animation("stop");
 				}
 			}
-			
 			if(this._energy > 0) {
 				if(this.currentAnimation == "stop") {
 					this.animation("run");
 				}
 				this.x += this.speed;
 				this._energy -= this.speed;
-				if(this._energy <= 0) {
+				if(this._energy < 0) {
 					this._energy = 0;
-					this.animation("stop");
 				} 
 			}else if(this._energy < 0) {
 				this.x -= this.speed;
 				this._energy += this.speed;
-				if(this._energy >= 0) {
+				if(this._energy > 0) {
 					this._energy = 0;
-					this.animation("stop");					
 				}
 			}
+			
+			if(this._energy == 0) {
+				this.animation("stop");
+			} 
 			
 			if(this.canDown && this._lift == 0) {
 				this.y += this.gravity;
@@ -604,6 +615,8 @@ module Zodream {
 		public static width: number = window.innerWidth;
 		
 		public static height: number = window.innerHeight;
+		
+		public static stoneHeight: number = Math.floor(window.innerHeight / 4);
 		
 	}
 	
