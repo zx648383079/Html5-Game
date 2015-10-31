@@ -136,24 +136,13 @@ var Zodream;
             this._loader.loadManifest(Configs.resources);
             this._loader.getResult();
         };
-        LoadScene.prototype._sounds = function () {
-            createjs.Sound.alternateExtensions = ["mp3"];
-            var preload = new createjs.LoadQueue(true);
-            preload.installPlugin(createjs.Sound);
-            preload.loadManifest(Configs.sounds);
-        };
         LoadScene.prototype._fileLoad = function () {
             this._setSchedule(this._index++);
         };
         LoadScene.prototype._complete = function () {
             for (var i = 0, len = Configs.resources.length; i < len; i++) {
                 var image = Configs.resources[i];
-                if (image.id == "model") {
-                    Resources.models = this._loader.getResult(image.id);
-                }
-                else {
-                    Resources.setImage(image.id, this._loader.getResult(image.id));
-                }
+                Resources.setImage(image.id, this._loader.getResult(image.id));
             }
             this.navigate(new MainScene());
         };
@@ -171,9 +160,9 @@ var Zodream;
             this.setFPS(10);
         };
         MainScene.prototype._drawBtn = function () {
-            var btn = new createjs.Shape(new createjs.Graphics().beginFill("#ff0000").drawRect(0, 0, 100, 50));
-            btn.x = Configs.width / 2;
-            btn.y = Configs.height / 2;
+            var img = Resources.getImage('start'), btn = new createjs.Shape(new createjs.Graphics().beginBitmapFill(img).drawRect(0, 0, img.width, img.height));
+            btn.x = (Configs.width - img.width) / 2;
+            btn.y = (Configs.height - img.height) / 2;
             btn.addEventListener("click", this._click.bind(this));
             this.addChild(btn);
         };
@@ -187,22 +176,28 @@ var Zodream;
         __extends(GameScene, _super);
         function GameScene() {
             _super.apply(this, arguments);
-            this._count = Math.ceil(Configs.width / 80) + 1; //一屏台阶的数目
         }
         GameScene.prototype.init = function () {
             _super.prototype.init.call(this);
-            this._stones = new Array();
-            this._coins = new Array();
-            this._index = 0;
-            this._distance = 0;
-            this._drawSky();
+            this._time = 200;
+            this._total = 100;
+            this._shapes = Array();
             this._drawShip();
             this._drawScore();
-            for (var i = 0; i < this._count; i++) {
-                this._draw();
-            }
             this.setFPS(30);
             this.addKeyEvent(this._keyDown.bind(this));
+        };
+        GameScene.prototype._draw = function () {
+            var tem = Math.random(), x = Math.random() * (Configs.width - 100), speed = Math.ceil(Math.random() * 10);
+            if (tem < 0.2) {
+                this._drawGhost(x, speed);
+            }
+            else if (tem < 0.5) {
+                this._drawCandy(x, speed);
+            }
+            else {
+                this._drawPumpkin(x, speed, tem > 0.8);
+            }
         };
         GameScene.prototype._drawScore = function () {
             this._score = new createjs.Text((0).toString(), 'bold 30px Courier New', '#ff0000');
@@ -210,188 +205,121 @@ var Zodream;
             this._score.x = 100;
             this.addChild(this._score);
         };
-        GameScene.prototype._draw = function () {
-            var x = this._index * 80 - this._distance;
-            switch (Resources.models[0][this._index]) {
-                case 3:
-                    this._drawCoin(new Point(x + 15, Configs.stoneHeight + 100));
-                case 0:
-                    break;
-                case 4:
-                    this._drawCoin(new Point(x + 15, Configs.stoneHeight + 100));
-                case 1:
-                    this._drawStone(new Point(x, Configs.stoneHeight));
-                    break;
-                case 5:
-                    this._drawCoin(new Point(x + 15, Configs.stoneHeight + 150));
-                case 2:
-                    this._drawStone(new Point(x, Configs.stoneHeight + 50), Resources.getImage("high"));
-                    break;
-                default:
-                    break;
-            }
-            this._index++;
-        };
         GameScene.prototype._keyDown = function (event) {
             switch (event.keyCode) {
                 case 39:
-                    this._shap.animation("run");
-                    this._shap.energy = 60;
+                    this._shap.animation("nright");
                     break;
-                case 32:
-                    this._shap.animation("jump");
-                    this._shap.lift = 50;
+                case 37:
+                    this._shap.animation("nleft");
                     break;
                 default:
                     break;
             }
         };
-        GameScene.prototype._drawSky = function (arg) {
-            if (arg === void 0) { arg = Resources.getImage("bg"); }
-            var sky = new createjs.Shape();
-            sky.graphics.beginBitmapFill(arg).drawRect(0, 0, arg.width, arg.height);
-            sky.setTransform(0, 0, Configs.width / arg.width, Configs.height / arg.height);
-            this.addChild(sky);
+        GameScene.prototype._drawCandy = function (x, speed) {
+            if (x === void 0) { x = 0; }
+            if (speed === void 0) { speed = 1; }
+            var img = Resources.getImage("candy"), shape = new Shape(new createjs.Graphics().beginBitmapFill(img).drawRect(0, 0, img.width, img.height));
+            shape.setBound(x, -img.height, img.width, img.height);
+            shape.name = "candy";
+            shape.value = 30;
+            shape.speed = speed;
+            this.addChild(shape);
+            this._shapes.push(shape);
         };
-        GameScene.prototype._drawShip = function () {
-            var manSpriteSheet = new createjs.SpriteSheet({
-                "images": [Resources.getImage("man")],
-                "frames": { "regX": 0, "height": 64, "count": 66, "regY": 1, "width": 64 },
+        GameScene.prototype._drawPumpkin = function (x, speed, big) {
+            if (x === void 0) { x = 0; }
+            if (speed === void 0) { speed = 1; }
+            if (big === void 0) { big = false; }
+            var img = Resources.getImage(big ? "pumpkinl" : "pumpkin");
+            var shape = new Shape(new createjs.Graphics().beginBitmapFill(img).drawRect(0, 0, img.width, img.height));
+            shape.setBound(x, -img.height, img.width, img.height);
+            shape.speed = speed;
+            shape.name = "pumpkin";
+            shape.value = big ? 100 : 50;
+            this.addChild(shape);
+            this._shapes.push(shape);
+        };
+        GameScene.prototype._drawGhost = function (x, speed) {
+            if (x === void 0) { x = 0; }
+            if (speed === void 0) { speed = 1; }
+            var ghostSpriteSheet = new createjs.SpriteSheet({
+                "images": [Resources.getImage("ghost")],
+                "frames": { "regX": 0, "height": 70, "count": 5, "regY": 0, "width": 70 },
                 "animations": {
-                    "stop": {
-                        frames: [65],
-                        next: "stop",
-                        speed: 0.2,
-                    },
                     "run": {
-                        frames: [21, 20, 19, 18, 17, 16, 15, 14, 13, 12],
-                        next: "run",
-                        speed: 0.4,
-                    },
-                    "jump": {
-                        frames: [33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43],
-                        next: "stop",
-                        speed: 0.1,
-                    },
-                    "die": {
-                        frames: [8, 7, 6, 5, 4, 3, 2, 1, 0],
-                        next: "die",
-                        speed: 0.3,
+                        frames: [4, 3, 2, 1, 0],
+                        next: true,
+                        speed: 0.2,
                     }
                 }
             });
-            this._shap = new Person(manSpriteSheet, "run");
-            this._shap.framerate = 13;
-            this._shap.setBound(0, Configs.height, 64, 64);
-            this._shap.energy = 100;
-            //this._shap.setTransform( 60, 60, 1.5, 1.5);
+            var ghost = new Sprite(ghostSpriteSheet, "run");
+            ghost.name = "ghost";
+            ghost.value = -200;
+            ghost.speed = speed;
+            ghost.setBound(x, -70, 70, 70);
+            this.addChild(ghost);
+            this._shapes.push(ghost);
+        };
+        GameScene.prototype._drawShip = function () {
+            var manSpriteSheet = new createjs.SpriteSheet({
+                "images": [Resources.getImage("shap")],
+                "frames": { "regX": 0, "height": 161, "count": 16, "regY": 0, "width": 147 },
+                "animations": {
+                    "nleft": {
+                        frames: [0, 1, 2, 3],
+                        next: true,
+                        speed: 0.2,
+                    },
+                    "nright": {
+                        frames: [4, 5, 6, 7],
+                        next: true,
+                        speed: 0.2,
+                    },
+                    "left": {
+                        frames: [8, 9, 10, 11],
+                        next: true,
+                        speed: 0.2,
+                    },
+                    "right": {
+                        frames: [12, 13, 14, 15],
+                        next: true,
+                        speed: 0.2,
+                    },
+                }
+            });
+            this._shap = new Person(manSpriteSheet, "nleft");
+            this._shap.setBound(Configs.width / 2, Configs.height - 200, 147, 161);
             this.addChild(this._shap);
-        };
-        GameScene.prototype._drawCoin = function (point, arg) {
-            if (arg === void 0) { arg = Resources.getImage("coin"); }
-            var coin = new Coin();
-            coin.graphics.beginBitmapFill(arg).drawRect(0, 0, 50, 50);
-            coin.setBound(point, 50, 50);
-            this.addChild(coin);
-            this._coins.push(coin);
-        };
-        GameScene.prototype._drawStone = function (point, arg) {
-            if (arg === void 0) { arg = Resources.getImage("ground"); }
-            var stone = new Shape();
-            stone.graphics.beginBitmapFill(arg).drawRect(0, 0, 80, arg.height);
-            stone.setBound(point, 80, point.y);
-            stone.scaleY = stone.point.y / arg.height;
-            this.addChild(stone);
-            this._stones.push(stone);
         };
         GameScene.prototype.update = function () {
             var _this = this;
-            var bound = this._shap.getBound(), distance = 0;
-            if (this._shap.x - Configs.width / 2 > 0 && this._index <= Resources.models[0].length) {
-                distance = 2;
-            }
-            this._distance += distance;
-            bound.x += 20;
-            bound.width -= 40;
-            this._stones.forEach(function (stone) {
-                if (bound.x + bound.width == stone.x && stone.y < bound.y + bound.height - 1) {
-                    _this._shap.energy = 0;
+            var bound = this._shap.getBound();
+            bound.y += 40;
+            bound.height -= 40;
+            this._shapes.forEach(function (shape, i) {
+                shape.y += shape.speed;
+                if (_this._rectCollide(shape.getBound(), bound)) {
+                    _this._total--;
+                    _this._score.text = (parseInt(_this._score.text, 10) + shape.value).toString();
+                    _this._shapes.splice(i, 1);
+                    _this.removeChild(shape);
                 }
-                var right = stone.x + stone.getBound().width;
-                if (((bound.x > stone.x &&
-                    bound.x < right) ||
-                    (bound.x + bound.width > stone.x &&
-                        bound.x + bound.width < right)) &&
-                    bound.y + bound.height >= stone.y) {
-                    _this._shap.canDown = false;
-                    _this._shap.isSuspeed = false;
-                }
-                if (right <= 0) {
-                    _this.removeChild(_this._stones.shift());
-                }
-                else {
-                    stone.x -= distance;
+                else if (shape.y > Configs.height) {
+                    _this._shapes.splice(i, 1);
+                    _this.removeChild(shape);
                 }
             });
-            if (this._distance > 0 && this._distance % 80 == 0) {
-                this._draw();
-            }
-            this._coins.forEach(function (coin, i) {
-                if (coin.x <= 20 && coin.y <= 20) {
-                    _this._score.text = (parseInt(_this._score.text) + 50).toString();
-                    _this.removeChild(coin);
-                    _this._coins.splice(i, 1);
-                }
-                if (_this._ballCollideRect(coin.getBall(), bound)) {
-                    coin.move();
-                }
-                if (coin.x + coin.getBound().width < 0) {
-                    _this.removeChild(coin);
-                    _this._coins.splice(i, 1);
-                }
-                else {
-                    coin.x -= distance;
-                }
-            });
-            this._shap.x -= distance;
-            this._shap.move();
             _super.prototype.update.call(this);
-            if (this._shap.point.y <= 0 || this._shap.x >= Configs.width - 64) {
+            if (this._total <= 0) {
                 this.navigate(new EndScene(), this._score.text);
             }
-        };
-        /**
-         * 矩形与圆的碰撞检测
-         * 来源：http://bbs.9ria.com/thread-137642-1-1.html
-         */
-        GameScene.prototype._collide = function (ball, rect) {
-            var rx = ball.x - (rect.x + rect.width / 2), ry = ball.y - (rect.y + rect.height / 2), dx = Math.min(rx, rect.width / 2), dx1 = Math.max(dx, -rect.width / 2), dy = Math.min(ry, rect.height / 2), dy1 = Math.max(dy, -rect.height / 2);
-            return Math.pow(dx1 - rx, 2) + Math.pow(dy1 - ry, 2) <= Math.pow(ball.radius, 2);
-        };
-        /**
-         * 矩形与圆的碰撞检测
-         *
-         */
-        GameScene.prototype._ballCollideRect = function (ball, rect) {
-            if (ball.x < rect.x && ball.y < rect.y) {
-                return Math.pow(ball.x - rect.x, 2) + Math.pow(ball.y - rect.y, 2) <
-                    Math.pow(ball.radius, 2);
-            }
-            else if (ball.x < rect.x && ball.y > rect.y + rect.height) {
-                return Math.pow(ball.x - rect.x, 2) + Math.pow(ball.y - rect.y - rect.height, 2) <
-                    Math.pow(ball.radius, 2);
-            }
-            else if (ball.x > rect.x + rect.width && ball.y < rect.y) {
-                return Math.pow(ball.x - rect.x - rect.width, 2) + Math.pow(ball.y - rect.y, 2) <
-                    Math.pow(ball.radius, 2);
-            }
-            else if (ball.x > rect.x + rect.width && ball.y > rect.y + rect.height) {
-                return Math.pow(ball.x - rect.x - rect.width, 2) + Math.pow(ball.y - rect.y - rect.height, 2) <
-                    Math.pow(ball.radius, 2);
-            }
-            else {
-                return (Math.abs(ball.x - rect.x - rect.width / 2) < ball.radius + rect.width / 2) &&
-                    (Math.abs(ball.y - rect.y - rect.height / 2) < ball.radius + rect.height / 2);
+            this._time--;
+            if (this._time <= 0) {
+                this._draw();
+                this._time = Math.random() * 60;
             }
         };
         /**
@@ -403,15 +331,6 @@ var Zodream;
                 rect1.x < rect2.x + rect2.width &&
                 rect1.y + rect1.height > rect2.y &&
                 rect1.y < rect2.y + rect2.height;
-        };
-        /**
-         * 圆之间的碰撞检测
-         *
-         */
-        GameScene.prototype._ballCollide = function (ball1, ball2) {
-            return Math.pow(ball1.x - ball2.x, 2) +
-                Math.pow(ball1.y - ball2.y, 2) <
-                Math.pow(ball1.radius + ball2.radius, 2);
         };
         return GameScene;
     })(Scene);
@@ -434,9 +353,9 @@ var Zodream;
             this.addChild(lable);
         };
         EndScene.prototype._drawBtn = function () {
-            var btn = new Shape(new createjs.Graphics().beginFill("#ff0000").drawRect(0, 0, 100, 50));
-            btn.x = Configs.width / 2;
-            btn.y = Configs.height / 2;
+            var img = Resources.getImage('restart'), btn = new createjs.Shape(new createjs.Graphics().beginBitmapFill(img).drawRect(0, 0, img.width, img.height));
+            btn.x = (Configs.width - img.width) / 2;
+            btn.y = (Configs.height - img.height) / 2;
             btn.addEventListener("click", this._click.bind(this));
             this.addChild(btn);
         };
@@ -446,137 +365,61 @@ var Zodream;
         return EndScene;
     })(Scene);
     Zodream.EndScene = EndScene;
+    var Sprite = (function (_super) {
+        __extends(Sprite, _super);
+        function Sprite() {
+            _super.apply(this, arguments);
+        }
+        Sprite.prototype.setBound = function (x, y, width, height) {
+            if (x instanceof Bound) {
+                this.x = x.x;
+                this.y = x.y;
+                this._width = x.width;
+                this._height = x.height;
+            }
+            else {
+                this.x = x;
+                this.y = y;
+                this._width = width;
+                this._height = height;
+            }
+        };
+        Sprite.prototype.getBound = function () {
+            return new Bound(this.x, this.y, this._width, this._height);
+        };
+        return Sprite;
+    })(createjs.Sprite);
+    Zodream.Sprite = Sprite;
     var Person = (function (_super) {
         __extends(Person, _super);
         function Person() {
             _super.apply(this, arguments);
-            this.speed = 2;
-            this._energy = 0;
-            this.gravity = 2; // 重力
-            this._lift = 0; //升力
-            this.isSuspeed = true; //判断是否是悬浮状态
-            this.canDown = true;
         }
-        Object.defineProperty(Person.prototype, "point", {
-            get: function () {
-                this._point.setWorld(this.x, this.y);
-                return this._point;
-            },
-            set: function (arg) {
-                this._point = arg;
-                var val = arg.getWorld();
-                this.x = val.x;
-                this.y = val.y;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Person.prototype, "size", {
-            get: function () {
-                return this._size;
-            },
-            set: function (arg) {
-                this._size = arg;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Person.prototype.setBound = function (x, y, width, height) {
-            if (x instanceof Point) {
-                this.point = x;
-                if (y instanceof Size) {
-                    this.size = y;
-                }
-                else {
-                    this.size = new Size(y, width);
-                }
-            }
-            else {
-                this.point = new Point(x, y);
-                if (width instanceof Size) {
-                    this.size = width;
-                }
-                else {
-                    this.size = new Size(width, height);
-                }
-            }
-        };
-        Person.prototype.getBound = function () {
-            return new Bound(this.x, this.y, this.size.width, this.size.height);
-        };
-        Object.defineProperty(Person.prototype, "energy", {
-            get: function () {
-                return this._energy;
-            },
-            set: function (arg) {
-                if (this._energy >= 0 && arg > 0) {
-                    this._energy += arg;
-                }
-                else if ((this._energy > 0 && arg <= 0) || (this._energy < 0 && arg >= 0)) {
-                    this._energy = arg;
-                }
-                else if (this._energy <= 0 && arg < 0) {
-                    this._energy += arg;
-                }
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Person.prototype, "lift", {
-            get: function () {
-                return this._lift;
-            },
-            set: function (arg) {
-                if (!this.isSuspeed) {
-                    this._lift += arg;
-                    this.isSuspeed = true;
-                }
-            },
-            enumerable: true,
-            configurable: true
-        });
         Person.prototype.animation = function (arg) {
             if (arg != this.currentAnimation) {
                 this.gotoAndPlay(arg);
             }
-        };
-        Person.prototype.move = function () {
-            if (this._lift > 0) {
-                this.animation("jump");
-                this.y -= this.gravity;
-                this._lift -= this.gravity;
-                if (this._lift <= 0) {
-                    this._lift = 0;
-                    this.animation("stop");
+            else {
+                switch (arg) {
+                    case "nleft":
+                    case "left":
+                        if (this.x > 10) {
+                            this.x -= 10;
+                        }
+                        break;
+                    case "nright":
+                    case "right":
+                        if (this.x < Configs.width - this._width) {
+                            this.x += 10;
+                        }
+                        break;
+                    default:
+                        break;
                 }
             }
-            if (this._energy > 0) {
-                if (this.currentAnimation == "stop") {
-                    this.animation("run");
-                }
-                this.x += this.speed;
-                this._energy -= this.speed;
-                if (this._energy < 0) {
-                    this._energy = 0;
-                }
-            }
-            else if (this._energy < 0) {
-                this.x -= this.speed;
-                this._energy += this.speed;
-                if (this._energy > 0) {
-                    this._energy = 0;
-                }
-            }
-            if (this._energy == 0 && !this.canDown) {
-                this.animation("stop");
-            }
-            if (this.canDown && this._lift == 0) {
-                this.y += this.gravity;
-            }
-            this.canDown = true;
         };
         return Person;
-    })(createjs.Sprite);
+    })(Sprite);
     Zodream.Person = Person;
     var Shape = (function (_super) {
         __extends(Shape, _super);
@@ -587,18 +430,18 @@ var Zodream;
             if (x instanceof Bound) {
                 this.x = x.x;
                 this.y = x.y;
-                this.width = x.width;
-                this.height = x.height;
+                this._width = x.width;
+                this._height = x.height;
             }
             else {
                 this.x = x;
                 this.y = y;
-                this.width = width;
-                this.height = height;
+                this._width = width;
+                this._height = height;
             }
         };
         Shape.prototype.getBound = function () {
-            return new Bound(this.x, this.y, this.width, this.height);
+            return new Bound(this.x, this.y, this._width, this._height);
         };
         return Shape;
     })(createjs.Shape);
@@ -607,16 +450,16 @@ var Zodream;
         function Configs() {
         }
         Configs.resources = [
-            { src: "img/man.png", id: "man" },
-            { src: "img/ground.png", id: "ground" },
-            { src: "img/bg.png", id: "bg" },
-            { src: "img/high.jpg", id: "high" },
-            { src: "img/coin.png", id: "coin" },
-            { src: "js/game.json", id: "model" }
+            { src: "img/candy.png", id: "candy" },
+            { src: "img/ghost.png", id: "ghost" },
+            { src: "img/pumpkin.png", id: "pumpkin" },
+            { src: "img/pumpkin_l.png", id: "pumpkinl" },
+            { src: "img/shap.png", id: "shap" },
+            { src: "img/start.png", id: "start" },
+            { src: "img/restart.png", id: "restart" },
         ];
         Configs.width = window.innerWidth;
         Configs.height = window.innerHeight;
-        Configs.stoneHeight = Math.floor(window.innerHeight / 4);
         return Configs;
     })();
     Zodream.Configs = Configs;

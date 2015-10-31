@@ -128,11 +128,7 @@ module Zodream {
 		private _complete(): void {
 			for (var i = 0, len = Configs.resources.length; i < len; i++) {
 				var image = Configs.resources[i];
-				if(image.id == "model") {
-					Resources.models = <any[]>this._loader.getResult(image.id);
-				}else{
-					Resources.setImage( image.id , this._loader.getResult(image.id) );					
-				}
+				Resources.setImage( image.id , this._loader.getResult(image.id) );
 			}
 			
 			this.navigate(new MainScene());
@@ -147,9 +143,10 @@ module Zodream {
 		}
 		
 		private _drawBtn(): void {
-			var btn = new createjs.Shape(new createjs.Graphics().beginFill("#ff0000").drawRect(0, 0, 100, 50));
-			btn.x = Configs.width / 2;
-			btn.y = Configs.height / 2;
+			var img = Resources.getImage('start'),
+				btn = new createjs.Shape(new createjs.Graphics().beginBitmapFill(img).drawRect(0, 0, img.width, img.height));
+			btn.x = (Configs.width - img.width) / 2 ;
+			btn.y = (Configs.height - img.height) / 2;
 			btn.addEventListener("click", this._click.bind(this));
 			this.addChild(btn);
 		}
@@ -163,15 +160,34 @@ module Zodream {
 		private _shap: Person;
 		
 		private _score: createjs.Text;										//记录分数
+		
+		private _shapes: Array<Sprite | Shape>;
+		
+		private _total: number;
+		private _time: number;
 				
 		public init(): void {
-			super.init();
-						
-			this._drawSky();
+			super.init();	
+			this._time = 200;	
+			this._total = 100;
+			this._shapes = Array();	
 			this._drawShip();
 			this._drawScore();
 			this.setFPS(30);
 			this.addKeyEvent(this._keyDown.bind(this));
+		}
+		
+		private _draw() {
+			var tem = Math.random(),
+				x = Math.random() * (Configs.width - 100),
+				speed = Math.ceil(Math.random() * 10);
+			if(tem < 0.2) {
+				this._drawGhost(x, speed);
+			}else if(tem < 0.5){
+				this._drawCandy(x, speed);
+			}else{
+				this._drawPumpkin(x, speed, tem > 0.8);
+			}
 		}
 		
 		private _drawScore(): void {
@@ -184,66 +200,116 @@ module Zodream {
 		private _keyDown(event: any): void{
 			switch (event.keyCode) {
 				case 39:
-					this._shap.animation("run");
-					this._shap.energy = 60;
+					this._shap.animation("nright");
 					break;
-				case 32:
-					this._shap.animation("jump");
-					this._shap.lift = 50;
+				case 37:
+					this._shap.animation("nleft");
 					break;
 				default:
 					break;
 			}
 		}
 		
-		private _drawSky(arg: HTMLImageElement = Resources.getImage("bg")): void {
-			var sky = new createjs.Shape();
-			sky.graphics.beginBitmapFill( arg ).drawRect(0, 0, arg.width, arg.height);
-			sky.setTransform(0, 0, Configs.width / arg.width , Configs.height / arg.height);
-			this.addChild(sky);
+		private _drawCandy(x: number = 0, speed: number = 1): void {
+			var img = Resources.getImage( "candy" ),			
+				shape = new Shape(new createjs.Graphics().beginBitmapFill(img).drawRect(0, 0, img.width, img.height));
+			shape.setBound(x, -img.height, img.width, img.height);
+			shape.name = "candy";
+			shape.value = 30;
+			shape.speed = speed;
+			this.addChild(shape);
+			this._shapes.push(shape);
+		}
+		
+		private _drawPumpkin(x: number = 0, speed: number = 1, big = false): void {
+			var img = Resources.getImage( big ? "pumpkinl" : "pumpkin" );
+			var shape = new Shape(new createjs.Graphics().beginBitmapFill(img).drawRect(0, 0, img.width, img.height));
+			shape.setBound(x, -img.height, img.width, img.height);
+			shape.speed = speed;
+			shape.name = "pumpkin";
+			shape.value = big ? 100 : 50;
+			this.addChild(shape);
+			this._shapes.push(shape);
+		}
+		
+		private _drawGhost(x: number = 0, speed: number = 1): void {
+			var ghostSpriteSheet = new createjs.SpriteSheet({
+				"images": [ Resources.getImage("ghost") ],
+				"frames": {"regX": 0, "height": 70, "count": 5,"regY": 0, "width": 70},
+				"animations": {
+					"run": {
+						frames: [ 4, 3, 2, 1, 0 ],
+						next: true,
+						speed: 0.2,
+					}
+				}
+			});
+			var ghost = new Sprite(ghostSpriteSheet , "run");
+			ghost.name = "ghost";
+			ghost.value = -200;
+			ghost.speed = speed;
+			ghost.setBound(x, -70, 70, 70);
+			this.addChild(ghost);
+			this._shapes.push(ghost);
 		}
 		
 		private _drawShip(): void {
 			var manSpriteSheet = new createjs.SpriteSheet({
-				"images": [ Resources.getImage("man") ],
-				"frames": {"regX": 0, "height": 64, "count": 66,"regY": 1, "width": 64},
+				"images": [ Resources.getImage("shap") ],
+				"frames": {"regX": 0, "height": 161, "count": 16,"regY": 0, "width": 147},
 				"animations": {
-					"stop": {
-						frames: [65],
-						next: "stop",
+					"nleft": {
+						frames: [ 0, 1, 2, 3 ],
+						next: true,
 						speed: 0.2,
-					},
-					"run": {
-						frames: [ 21, 20, 19, 18, 17, 16, 15, 14, 13, 12 ],
-						next: "run",
-						speed: 0.4,
 					}, 
-					"jump": {
-						frames: [ 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43 ],
-						next: "stop",
-						speed: 0.1,
-					},
-					"die": {
-						frames: [8, 7, 6, 5, 4, 3, 2, 1, 0 ],
-						next: "die",
-						speed: 0.3,
-					}
+					"nright": {
+						frames: [ 4, 5, 6, 7 ],
+						next: true,
+						speed: 0.2,
+					}, 
+					"left": {
+						frames: [ 8, 9, 10, 11 ],
+						next: true,
+						speed: 0.2,
+					}, 
+					"right": {
+						frames: [ 12, 13, 14, 15 ],
+						next: true,
+						speed: 0.2,
+					}, 
 				}
 			});
-			this._shap = new Person(manSpriteSheet , "run");
-			this._shap.framerate = 13;
-			this._shap.setBound( 0, Configs.height , 64, 64);
-			this._shap.energy = 100;			
-			//this._shap.setTransform( 60, 60, 1.5, 1.5);
+			this._shap = new Person(manSpriteSheet , "nleft");
+			this._shap.setBound(Configs.width / 2, Configs.height - 200, 147, 161);
 			this.addChild(this._shap);
 		}
 		
 		protected update(): void {
-			
+			var bound = this._shap.getBound();
+			bound.y += 40;
+			bound.height -= 40;
+			this._shapes.forEach( (shape, i) => {
+				shape.y += shape.speed;
+				if(this._rectCollide(shape.getBound(), bound)) {
+					this._total --;
+					this._score.text = (parseInt(this._score.text, 10) + shape.value).toString();
+					this._shapes.splice(i, 1);
+					this.removeChild(shape);	
+				}else if(shape.y > Configs.height) {
+					this._shapes.splice(i, 1);
+					this.removeChild(shape);
+				}
+			});
 			super.update();
+			if(this._total <= 0) {
+				this.navigate(new EndScene(), this._score.text);
+			}
 			
-			if(this._shap.point.y <= 0 || this._shap.x >= Configs.width - 64) {
-				this.navigate( new EndScene(), this._score.text);
+			this._time --;
+			if(this._time <= 0) {
+				this._draw();
+				this._time = Math.random() * 60;	
 			}
 		}
 		
@@ -275,9 +341,10 @@ module Zodream {
 		}
 		
 		private _drawBtn(): void {
-			var btn = new Shape(new createjs.Graphics().beginFill("#ff0000").drawRect(0, 0, 100, 50));
-			btn.x = Configs.width / 2;
-			btn.y = Configs.height / 2;
+			var img = Resources.getImage('restart'),
+				btn = new createjs.Shape(new createjs.Graphics().beginBitmapFill(img).drawRect(0, 0, img.width, img.height));
+			btn.x = (Configs.width - img.width) / 2 ;
+			btn.y = (Configs.height - img.height) / 2;
 			btn.addEventListener("click", this._click.bind(this));
 			this.addChild(btn);
 		}
@@ -287,14 +354,67 @@ module Zodream {
 		}
 	}
 	
-	export class Person extends createjs.Sprite {
+	export class Sprite extends createjs.Sprite {
+		protected _width: number;
 		
+		protected _height: number;
+		
+		public value: number;
+		
+		public speed: number;
+		
+		public setBound(x: number | Bound, y?: number, width?: number, height?: number) {
+			if(x instanceof Bound) {
+				this.x = x.x;
+				this.y = x.y; 
+				this._width = x.width;
+				this._height = x.height;
+			}else {
+				this.x = <number>x;
+				this.y = y; 
+				this._width = width;
+				this._height = height;
+			}
+		}
+		
+		public getBound(): Bound {
+			return new Bound(this.x, this.y, this._width, this._height);
+		}
+	}
+	
+	export class Person extends Sprite {
+		public animation(arg: string): void {
+			if(arg != this.currentAnimation) {
+				this.gotoAndPlay(arg);
+			}else {
+				switch (arg) {
+					case "nleft":
+					case "left":
+						if(this.x > 10) {
+							this.x -= 10;							
+						}
+						break;
+					case "nright":
+					case "right":
+						if(this.x < Configs.width - this._width) {
+							this.x += 10;						
+						}
+						break;
+					default:
+						break;
+				}
+			}
+		}
 	}
 	
 	export class Shape extends createjs.Shape {
 		private _width: number;
 		
 		private _height: number;
+		
+		public value: number;
+		public speed: number;
+		
 		
 		public setBound(x: number | Bound, y?: number, width?: number, height?: number) {
 			if(x instanceof Bound) {
@@ -320,8 +440,8 @@ module Zodream {
 			{src:"img/candy.png" , id:"candy"},
 			{src:"img/ghost.png" , id:"ghost"},
 			{src:"img/pumpkin.png" , id:"pumpkin"},
-			{src:"img/pumpkin_l.png" , id:"pumpkin_l"},
-			{src:"img/shape.png" , id:"shape"},
+			{src:"img/pumpkin_l.png" , id:"pumpkinl"},
+			{src:"img/shap.png" , id:"shap"},
 			{src:"img/start.png" , id:"start"},
 			{src:"img/restart.png" , id:"restart"},
 		];
