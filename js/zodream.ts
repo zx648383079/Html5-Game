@@ -120,12 +120,6 @@ module Zodream {
 			this._loader.loadManifest(Configs.resources);
 			this._loader.getResult()
 		}
-		private _sounds(): void {
-			createjs.Sound.alternateExtensions = ["mp3"];
-			var preload = new createjs.LoadQueue(true);
-			preload.installPlugin( createjs.Sound );
-			preload.loadManifest( Configs.sounds );
-		}
 		
 		private _fileLoad(): void {
 			this._setSchedule( this._index ++ );
@@ -169,32 +163,13 @@ module Zodream {
 		private _shap: Person;
 		
 		private _score: createjs.Text;										//记录分数
-		
-		private _stones: Shape[];                             				//台阶数组
-		
-		private _coins: Coin[];       										//金币数组
-		
-		private _index: number;        										//下一个台阶的数据
-		
-		private _count: number = Math.ceil(Configs.width / 80) + 1;         //一屏台阶的数目
-		
-		private _distance: number;
-		
+				
 		public init(): void {
 			super.init();
-			this._stones = new Array();	
-			this._coins = new Array();
-			this._index = 0;
-			this._distance = 0;
-			
+						
 			this._drawSky();
 			this._drawShip();
 			this._drawScore();
-			
-			for (var i = 0; i < this._count ; i++) {
-				this._draw();
-			}
-			
 			this.setFPS(30);
 			this.addKeyEvent(this._keyDown.bind(this));
 		}
@@ -204,29 +179,6 @@ module Zodream {
 			this._score.y = 50;
 			this._score.x = 100
 			this.addChild(this._score);
-		}
-		
-		private _draw() {
-			var x = this._index * 80 - this._distance;
-			switch (Resources.models[0][this._index]) {
-				case 3:
-					this._drawCoin( new Point( x + 15,  Configs.stoneHeight + 100 ) );
-				case 0:
-					break;
-				case 4:
-					this._drawCoin(new Point( x + 15, Configs.stoneHeight + 100 ) );
-				case 1:
-					this._drawStone( new Point( x , Configs.stoneHeight ) );
-					break;
-				case 5:
-					this._drawCoin(new Point( x + 15, Configs.stoneHeight + 150 ) );
-				case 2:
-					this._drawStone( new Point( x , Configs.stoneHeight + 50 ), Resources.getImage( "high" ) );
-					break;
-				default:
-					break;
-			}
-			this._index ++ ;
 		}
 		
 		private _keyDown(event: any): void{
@@ -286,114 +238,12 @@ module Zodream {
 			this.addChild(this._shap);
 		}
 		
-		private _drawCoin(point: Point, arg: HTMLImageElement = Resources.getImage("coin")): void {
-			var coin = new Coin();
-			coin.graphics.beginBitmapFill( arg ).drawRect(0, 0, 50 , 50);
-			coin.setBound( point , 50 , 50 );
-			this.addChild(coin);
-			this._coins.push(coin);		
-		}
-		
-		private _drawStone(point: Point, arg: HTMLImageElement = Resources.getImage("ground")): void {
-			var stone = new Shape();
-			stone.graphics.beginBitmapFill( arg ).drawRect(0, 0, 80 , arg.height);
-			stone.setBound( point , 80 , point.y );
-			stone.scaleY = stone.point.y / arg.height;
-			this.addChild(stone);
-			this._stones.push(stone);		
-		}
-		
 		protected update(): void {
-			var bound = this._shap.getBound(),
-				distance = 0 ;
-			if(this._shap.x - Configs.width / 2 > 0 && this._index <= Resources.models[0].length) {
-				distance = 2;
-			}
-			this._distance += distance;
-			bound.x += 20;
-			bound.width -= 40;
-			this._stones.forEach( (stone) => {
-				if(bound.x + bound.width == stone.x && stone.y < bound.y + bound.height - 1) {
-					this._shap.energy = 0;
-				}
-				var right = stone.x + stone.getBound().width;
-				if( ( (bound.x > stone.x && 
-					bound.x < right ) || 
-					(bound.x + bound.width > stone.x && 
-					bound.x + bound.width < right) ) && 
-					bound.y + bound.height >= stone.y ) {
-					this._shap.canDown = false;
-					this._shap.isSuspeed = false;
-				}
-				if(right <= 0) {
-					this.removeChild( this._stones.shift() );
-				}else {
-					stone.x -= distance;					
-				}
-			});
-			if( this._distance > 0 && this._distance % 80 == 0) {
-				this._draw();		
-			}
 			
-			this._coins.forEach( (coin, i) => {
-				if(coin.x <= 20 && coin.y <= 20) {
-					this._score.text = (parseInt(this._score.text) + 50 ).toString();
-					this.removeChild(coin);
-					this._coins.splice(i, 1);
-				}
-				if(this._ballCollideRect(coin.getBall() , bound )) {
-					coin.move();
-				}
-				if( coin.x + coin.getBound().width < 0) {
-					this.removeChild( coin );
-					this._coins.splice( i, 1 );
-				}else {
-					coin.x -= distance;
-				}
-			});
-			this._shap.x -= distance;
-			this._shap.move();
-					
 			super.update();
 			
 			if(this._shap.point.y <= 0 || this._shap.x >= Configs.width - 64) {
 				this.navigate( new EndScene(), this._score.text);
-			}
-		}
-		/**
-		 * 矩形与圆的碰撞检测
-		 * 来源：http://bbs.9ria.com/thread-137642-1-1.html
-		 */
-		private _collide( ball: Ball, rect: Bound ): boolean {
-			var rx = ball.x - (rect.x + rect.width / 2),
-                ry = ball.y - (rect.y + rect.height / 2),
-				dx = Math.min( rx, rect.width / 2),
-                dx1 = Math.max( dx, -rect.width / 2),
-                dy = Math.min( ry, rect.height / 2),
-                dy1 = Math.max( dy, -rect.height / 2);
-            return Math.pow(dx1 - rx, 2) + Math.pow( dy1 - ry , 2) <= Math.pow(ball.radius, 2);
-		}
-		
-		/**
-		 * 矩形与圆的碰撞检测
-		 * 
-		 */
-		private _ballCollideRect(ball: Ball, rect: Bound): boolean {
-			if(ball.x < rect.x && ball.y < rect.y) {
-				return Math.pow(ball.x - rect.x, 2) + Math.pow(ball.y - rect.y, 2) < 
-						Math.pow(ball.radius, 2);
-			}else if(ball.x < rect.x && ball.y > rect.y + rect.height) {
-				return Math.pow(ball.x - rect.x, 2) + Math.pow(ball.y - rect.y - rect.height, 2) < 
-						Math.pow(ball.radius, 2);
-			}else if(ball.x > rect.x + rect.width && ball.y < rect.y) {
-				return Math.pow(ball.x - rect.x - rect.width, 2) + Math.pow(ball.y - rect.y, 2) < 
-						Math.pow(ball.radius, 2);
-			}else if(ball.x > rect.x + rect.width && ball.y > rect.y + rect.height) {
-				return Math.pow(ball.x - rect.x - rect.width, 2) + Math.pow(ball.y - rect.y - rect.height, 2) < 
-						Math.pow(ball.radius, 2);
-			}else{
-				return (Math.abs( ball.x - rect.x - rect.width / 2 ) < ball.radius + rect.width / 2) && 
-						(Math.abs( ball.y - rect.y - rect.height / 2) < ball.radius + rect.height / 2);
 			}
 		}
 		
@@ -406,16 +256,6 @@ module Zodream {
 					rect1.x < rect2.x + rect2.width &&
 					rect1.y + rect1.height > rect2.y &&
 					rect1.y < rect2.y + rect2.height;
-		}
-		
-		/**
-		 * 圆之间的碰撞检测
-		 * 
-		 */
-		private _ballCollide(ball1: Ball, ball2: Ball): boolean {
-			return Math.pow(ball1.x - ball2.x , 2) + 
-					Math.pow(ball1.y - ball2.y, 2) < 
-					Math.pow(ball1.radius + ball2.radius, 2);
 		}
 	}
 	
@@ -448,210 +288,45 @@ module Zodream {
 	}
 	
 	export class Person extends createjs.Sprite {
-		private _point: Point;
 		
-		set point(arg: Point) {
-			this._point = arg;
-			var val: any = arg.getWorld();
-			this.x = val.x;
-			this.y = val.y;
-		}
-		
-		get point(): Point {
-			this._point.setWorld(this.x, this.y);
-			return this._point;
-		}
-		
-		private _size: Size;
-		
-		set size(arg: Size) {
-			this._size = arg;
-		}
-		
-		get size(): Size {
-			return this._size;
-		}
-		
-		public setBound(x: number | Point, y: number | Size, width?: number | Size, height?: number) {
-			if(x instanceof Point) {
-				this.point = <Point>x;
-				if(y instanceof Size) {
-					this.size = y;
-				}else{
-					this.size = new Size( <number>y, <number>width);
-				}
-			}else {
-				this.point = new Point( <number>x , <number>y);
-				if(width instanceof Size) {
-					this.size = width;
-				}else{
-					this.size = new Size( <number>width, <number>height);
-				}
-			}
-		}
-		
-		public getBound(): Bound {
-			return new Bound( this.x, this.y, this.size.width, this.size.height);
-		}
-		
-		public speed: number = 2;
-		
-		private _energy: number = 0;
-				
-		get energy(): number {
-			return this._energy;
-		}
-		
-		set energy(arg: number) {
-			if(this._energy >= 0 && arg > 0 ) {
-				this._energy += arg;
-			}else if( (this._energy > 0 && arg <= 0) || (this._energy < 0 && arg >= 0) ) {
-				this._energy = arg;
-			}else if(this._energy <= 0 && arg < 0 ) {
-				this._energy += arg;
-			}
-		}
-		
-		public gravity: number = 2;    // 重力
-		
-		private _lift: number = 0;     //升力
-		
-		public isSuspeed: boolean = true;      //判断是否是悬浮状态
-		
-		get lift(): number {
-			return this._lift;
-		}
-		
-		set lift(arg: number) {
-			if(!this.isSuspeed) {
-				this._lift += arg;
-				this.isSuspeed = true;
-			}
-		}
-		
-		public canDown: boolean = true;
-		
-		public animation(arg: string): void {
-			if(arg != this.currentAnimation) {
-				this.gotoAndPlay(arg);
-			}
-		}
-		
-		public move() {
-			if(this._lift > 0) {
-				this.animation("jump");
-				this.y -= this.gravity;
-				this._lift -= this.gravity;
-				if(this._lift <= 0) {
-					this._lift = 0;
-					this.animation("stop");
-				}
-			}
-			if(this._energy > 0) {
-				if(this.currentAnimation == "stop") {
-					this.animation("run");
-				}
-				this.x += this.speed;
-				this._energy -= this.speed;
-				if(this._energy < 0) {
-					this._energy = 0;
-				} 
-			}else if(this._energy < 0) {
-				this.x -= this.speed;
-				this._energy += this.speed;
-				if(this._energy > 0) {
-					this._energy = 0;
-				}
-			}
-			
-			if(this._energy == 0 && !this.canDown ) {
-				this.animation("stop");
-			} 
-			
-			if(this.canDown && this._lift == 0) {
-				this.y += this.gravity;
-			}
-			this.canDown = true;
-			
-		}
 	}
 	
 	export class Shape extends createjs.Shape {
-		private _point: Point;
+		private _width: number;
 		
-		set point(arg: Point) {
-			this._point = arg;
-			var val: any = arg.getWorld();
-			this.x = val.x;
-			this.y = val.y;
-		}
+		private _height: number;
 		
-		get point(): Point {
-			this._point.setWorld(this.x, this.y);			
-			return this._point;
-		}
-		
-		private _size: Size;
-		
-		set size(arg: Size) {
-			this._size = arg;
-		}
-		
-		get size(): Size {
-			return this._size;
-		}
-		
-		public setBound(x: number | Point, y: number | Size, width?: number | Size, height?: number) {
-			if(x instanceof Point) {
-				this.point = <Point>x;
-				if(y instanceof Size) {
-					this.size = y;
-				}else{
-					this.size = new Size( <number>y, <number>width);
-				}
+		public setBound(x: number | Bound, y?: number, width?: number, height?: number) {
+			if(x instanceof Bound) {
+				this.x = x.x;
+				this.y = x.y; 
+				this._width = x.width;
+				this._height = x.height;
 			}else {
-				this.point = new Point( <number>x , <number>y);
-				if(width instanceof Size) {
-					this.size = width;
-				}else{
-					this.size = new Size( <number>width, <number>height);
-				}
+				this.x = <number>x;
+				this.y = y; 
+				this._width = width;
+				this._height = height;
 			}
 		}
 		
 		public getBound(): Bound {
-			return new Bound(this.x, this.y, this.size.width, this.size.height);
-		}
-	}
-	
-	export class Coin extends Shape {
-		public getBall(): Ball {
-			return new Ball(this.x, this.y, Math.min(this.size.width, this.size.height) / 2 );
-		}
-		
-		public move( arg: Point = new Point( 20, Configs.height - 20 ) ) {
-			createjs.Tween.get(this).to({x: arg.getWorld().x, y: arg.getWorld().y}, 1000);
+			return new Bound(this.x, this.y, this._width, this._height);
 		}
 	}
 	
 	export class Configs {
 		public static resources: any[] = [
-			{src:"img/man.png" , id:"man"},
-			{src:"img/ground.png" , id:"ground"},
-			{src:"img/bg.png" , id:"bg"},
-			{src:"img/high.jpg" , id:"high"},
-			{src:"img/coin.png" , id:"coin"},
-			{src:"js/game.json" , id:"model"}
+			{src:"img/candy.png" , id:"candy"},
+			{src:"img/ghost.png" , id:"ghost"},
+			{src:"img/pumpkin.png" , id:"pumpkin"},
+			{src:"img/pumpkin_l.png" , id:"pumpkin_l"},
+			{src:"img/shape.png" , id:"shape"},
+			{src:"img/start.png" , id:"start"},
+			{src:"img/restart.png" , id:"restart"},
 		];
-		
-		public static sounds: Object[];
-		
 		public static width: number = window.innerWidth;
-		
-		public static height: number = window.innerHeight;
-		
-		public static stoneHeight: number = Math.floor(window.innerHeight / 4);
-		
+		public static height: number = window.innerHeight;		
 	}
 	
 	export class Resources {
@@ -673,36 +348,6 @@ module Zodream {
 		public static models: any[] = [];
 		
 	}
-	
-	export class Point {
-		constructor (
-			public x?: number,
-			public y?: number
-		) {
-		}
-		
-		public setLocal(x: number, y: number): void {
-			this.x = x;
-			this.y = y;
-		}
-		
-		public getLocal(): Point {
-			return this;
-		}
-		
-		public setWorld(x: number, y:number): void {
-			this.x = x;
-			this.y = Configs.height - y;
-		}
-		
-		public getWorld(): any {
-			return {
-				x: this.x,
-				y: Configs.height - this.y
-			};
-		}
-	}
-	
 	export class Bound {
 		constructor(
 			public x?: number,
@@ -710,23 +355,6 @@ module Zodream {
 			public width?: number,
 			public height?: number
 		) {
-		}
-	}
-	
-	export class Ball {
-		constructor(
-			public x?: number,			
-			public y?: number,
-			public radius?: number								
-		){
-		}
-	}
-	
-	export class Size {
-		constructor(
-			public width?: number,
-			public height?: number
-		){
 		}
 	}
 }

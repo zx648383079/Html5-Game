@@ -583,71 +583,26 @@ var Zodream;
         function Shape() {
             _super.apply(this, arguments);
         }
-        Object.defineProperty(Shape.prototype, "point", {
-            get: function () {
-                this._point.setWorld(this.x, this.y);
-                return this._point;
-            },
-            set: function (arg) {
-                this._point = arg;
-                var val = arg.getWorld();
-                this.x = val.x;
-                this.y = val.y;
-            },
-            enumerable: true,
-            configurable: true
-        });
-        Object.defineProperty(Shape.prototype, "size", {
-            get: function () {
-                return this._size;
-            },
-            set: function (arg) {
-                this._size = arg;
-            },
-            enumerable: true,
-            configurable: true
-        });
         Shape.prototype.setBound = function (x, y, width, height) {
-            if (x instanceof Point) {
-                this.point = x;
-                if (y instanceof Size) {
-                    this.size = y;
-                }
-                else {
-                    this.size = new Size(y, width);
-                }
+            if (x instanceof Bound) {
+                this.x = x.x;
+                this.y = x.y;
+                this.width = x.width;
+                this.height = x.height;
             }
             else {
-                this.point = new Point(x, y);
-                if (width instanceof Size) {
-                    this.size = width;
-                }
-                else {
-                    this.size = new Size(width, height);
-                }
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
             }
         };
         Shape.prototype.getBound = function () {
-            return new Bound(this.x, this.y, this.size.width, this.size.height);
+            return new Bound(this.x, this.y, this.width, this.height);
         };
         return Shape;
     })(createjs.Shape);
     Zodream.Shape = Shape;
-    var Coin = (function (_super) {
-        __extends(Coin, _super);
-        function Coin() {
-            _super.apply(this, arguments);
-        }
-        Coin.prototype.getBall = function () {
-            return new Ball(this.x, this.y, Math.min(this.size.width, this.size.height) / 2);
-        };
-        Coin.prototype.move = function (arg) {
-            if (arg === void 0) { arg = new Point(20, Configs.height - 20); }
-            createjs.Tween.get(this).to({ x: arg.getWorld().x, y: arg.getWorld().y }, 1000);
-        };
-        return Coin;
-    })(Shape);
-    Zodream.Coin = Coin;
     var Configs = (function () {
         function Configs() {
         }
@@ -684,31 +639,6 @@ var Zodream;
         return Resources;
     })();
     Zodream.Resources = Resources;
-    var Point = (function () {
-        function Point(x, y) {
-            this.x = x;
-            this.y = y;
-        }
-        Point.prototype.setLocal = function (x, y) {
-            this.x = x;
-            this.y = y;
-        };
-        Point.prototype.getLocal = function () {
-            return this;
-        };
-        Point.prototype.setWorld = function (x, y) {
-            this.x = x;
-            this.y = Configs.height - y;
-        };
-        Point.prototype.getWorld = function () {
-            return {
-                x: this.x,
-                y: Configs.height - this.y
-            };
-        };
-        return Point;
-    })();
-    Zodream.Point = Point;
     var Bound = (function () {
         function Bound(x, y, width, height) {
             this.x = x;
@@ -719,22 +649,5 @@ var Zodream;
         return Bound;
     })();
     Zodream.Bound = Bound;
-    var Ball = (function () {
-        function Ball(x, y, radius) {
-            this.x = x;
-            this.y = y;
-            this.radius = radius;
-        }
-        return Ball;
-    })();
-    Zodream.Ball = Ball;
-    var Size = (function () {
-        function Size(width, height) {
-            this.width = width;
-            this.height = height;
-        }
-        return Size;
-    })();
-    Zodream.Size = Size;
 })(Zodream || (Zodream = {}));
 //# sourceMappingURL=zodream.js.map
