@@ -1,5 +1,6 @@
 /// <reference path="../typings/tsd.d.ts"/>
 module Zodream {
+	"use strict"
 	export class App {
 		public static main (arg : string | HTMLCanvasElement): Program {
 			var app = new Zodream.Program(arg);
@@ -31,7 +32,7 @@ module Zodream {
 		}
 	}
 	
-	export class Scene {
+	export abstract class Scene {
 		protected stage: createjs.Stage;
 		
 		constructor(stage?: createjs.Stage , ...arg: any[]) {
@@ -191,7 +192,7 @@ module Zodream {
 					}
 				}		
 			}
-			this.stage.addChild(this._container);
+			this.addChild(this._container);
 		}
 		
 		private _drawCircle(x: number, y: number, arg: Status = Status.NONE) {
@@ -285,7 +286,7 @@ module Zodream {
 				var nexts = Array();
 				for (var i = 0, len = start.length; i < len; i++) {
 					var p = start[i];
-					for (var j in Direction) {
+					for (var j = 0; j < 6; j ++) {
 						var tem = this._getNextPoint(p, j);
 						if(tem.x > 8 || tem.x < 0 || tem.y < 0 || tem.y > 8) {
 							continue;
@@ -327,7 +328,7 @@ module Zodream {
 							width: 64
 						},
 						animations: {
-							run: [0, 14, "run", 1],
+							run: [0, 14, "run", 0.5],
 						}
 					});				
 					this._cat.spriteSheet = spriteSheet;
@@ -361,7 +362,7 @@ module Zodream {
 				var nexts = Array();
 				for (var i = 0; i < start.length; i++) {
 					var p = start[i];
-					for (var j in Direction) {
+					for (var j = 0; j < 6; j ++) {
 						var tem = this._getNextPoint(p, j );
 						if(tem.x > 8 || tem.x < 0 || tem.y < 0 || tem.y > 8) {
 							continue;
@@ -444,28 +445,31 @@ module Zodream {
 		}
 		
 		private _close(arg: boolean = false) {
-			this.navigate(new EndScene(), this._score.text, arg)
+			this.navigate(new EndScene(), this._score.text, arg);
 		}
 	}
 	
 	export class EndScene extends Scene {
 		protected init(...args: any[]): void {
 			super.init();
-			this._drawScore.call(this._drawScore, ...args);
+			this._drawScore.call(this, ...args);
 			this._drawBtn();
 			this.setFPS(10);
 		}
 		
 		private _drawScore(arg: string, success: boolean = false): void {
-			var text: string;
+			var text: string,
+				color: string;
 			if (success) {
-				text = "恭喜您，在经历" + arg + "步后终于围住了那只神经猫！";
+				text  = "恭喜您，在经历" + arg + "步后终于围住了那只神经猫！";
+				color = "#f00";
 			} else {
-				text = "经过" + arg + "步后还是被那只神经猫逃脱了，再接再厉吧！";
+				text  = "经过" + arg + "步后还是被那只神经猫逃脱了，再接再厉吧！";
+				color = "#000";
 			}
-			var lable = new createjs.Text( text, 'bold 30px Courier New', '#000');
-			lable.y = Configs.height / 2 - 50;
-			lable.x = Configs.width / 2 + 30;
+			var lable = new createjs.Text( text, 'bold 30px Courier New',  color);
+			lable.y = Configs.height / 2 - 170;
+			lable.x = Configs.width / 2 - 300;
 			this.addChild(lable);
 		}
 		
@@ -504,7 +508,7 @@ module Zodream {
 		public static resources: any[] = [
 			{src: "img/play.png", id: "play"},
 			{src: "img/cat.png", id: "cat"},
-			{src: "img/cat.png", id: "cated"}	
+			{src: "img/cated.png", id: "cated"}	
 		];
 		
 		public static width: number = window.innerWidth;

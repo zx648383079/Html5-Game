@@ -6,6 +6,7 @@ var __extends = (this && this.__extends) || function (d, b) {
 /// <reference path="../typings/tsd.d.ts"/>
 var Zodream;
 (function (Zodream) {
+    "use strict";
     var App = (function () {
         function App() {
         }
@@ -200,7 +201,7 @@ var Zodream;
                     }
                 }
             }
-            this.stage.addChild(this._container);
+            this.addChild(this._container);
         };
         GameScene.prototype._drawCircle = function (x, y, arg) {
             if (arg === void 0) { arg = Status.NONE; }
@@ -288,7 +289,7 @@ var Zodream;
                 var nexts = Array();
                 for (var i = 0, len = start.length; i < len; i++) {
                     var p = start[i];
-                    for (var j in Direction) {
+                    for (var j = 0; j < 6; j++) {
                         var tem = this._getNextPoint(p, j);
                         if (tem.x > 8 || tem.x < 0 || tem.y < 0 || tem.y > 8) {
                             continue;
@@ -329,7 +330,7 @@ var Zodream;
                             width: 64
                         },
                         animations: {
-                            run: [0, 14, "run", 1],
+                            run: [0, 14, "run", 0.5],
                         }
                     });
                     this._cat.spriteSheet = spriteSheet;
@@ -360,7 +361,7 @@ var Zodream;
                 var nexts = Array();
                 for (var i = 0; i < start.length; i++) {
                     var p = start[i];
-                    for (var j in Direction) {
+                    for (var j = 0; j < 6; j++) {
                         var tem = this._getNextPoint(p, j);
                         if (tem.x > 8 || tem.x < 0 || tem.y < 0 || tem.y > 8) {
                             continue;
@@ -462,23 +463,25 @@ var Zodream;
                 args[_i - 0] = arguments[_i];
             }
             _super.prototype.init.call(this);
-            (_a = this._drawScore).call.apply(_a, [this._drawScore].concat(args));
+            (_a = this._drawScore).call.apply(_a, [this].concat(args));
             this._drawBtn();
             this.setFPS(10);
             var _a;
         };
         EndScene.prototype._drawScore = function (arg, success) {
             if (success === void 0) { success = false; }
-            var text;
+            var text, color;
             if (success) {
                 text = "恭喜您，在经历" + arg + "步后终于围住了那只神经猫！";
+                color = "#f00";
             }
             else {
                 text = "经过" + arg + "步后还是被那只神经猫逃脱了，再接再厉吧！";
+                color = "#000";
             }
-            var lable = new createjs.Text(text, 'bold 30px Courier New', '#000');
-            lable.y = Configs.height / 2 - 50;
-            lable.x = Configs.width / 2 + 30;
+            var lable = new createjs.Text(text, 'bold 30px Courier New', color);
+            lable.y = Configs.height / 2 - 170;
+            lable.x = Configs.width / 2 - 300;
             this.addChild(lable);
         };
         EndScene.prototype._drawBtn = function () {
@@ -524,7 +527,7 @@ var Zodream;
         Configs.resources = [
             { src: "img/play.png", id: "play" },
             { src: "img/cat.png", id: "cat" },
-            { src: "img/cat.png", id: "cated" }
+            { src: "img/cated.png", id: "cated" }
         ];
         Configs.width = window.innerWidth;
         Configs.height = window.innerHeight;
