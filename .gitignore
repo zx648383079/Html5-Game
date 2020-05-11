@@ -50,3 +50,5 @@ cocosstudio/
 tools/
 
 typings/
+/node_modules
+/package-lock.json
