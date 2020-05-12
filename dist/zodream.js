@@ -60,8 +60,10 @@ var Resources = (function () {
         this.images[id] = img;
     };
     Resources.getImage = function (id) {
-        if (this.images[id] == undefined)
-            return null;
+        if (this.images[id] == undefined) {
+            throw id + ':img load failure';
+        }
+        ;
         return this.images[id];
     };
     Resources.sounds = function (id) {
@@ -145,7 +147,6 @@ var Scene = (function () {
         this.stage.update();
     };
     Scene.prototype.close = function () {
-        createjs.Ticker.reset();
         this.stage.removeAllChildren();
     };
     Scene.prototype.navigate = function (arg) {
@@ -230,17 +231,23 @@ var EndScene = (function (_super) {
         return _super !== null && _super.apply(this, arguments) || this;
     }
     EndScene.prototype.init = function () {
+        var _a;
         var args = [];
         for (var _i = 0; _i < arguments.length; _i++) {
             args[_i] = arguments[_i];
         }
         _super.prototype.init.call(this);
-        this._drawScore.call(this, args.length > 0 ? args[0] : false);
+        (_a = this._drawScore).call.apply(_a, __spreadArrays([this], args));
         this._drawBtn();
         this.setFPS(10);
     };
     EndScene.prototype._drawScore = function (arg, success) {
+        if (arg === void 0) { arg = 0; }
         if (success === void 0) { success = false; }
+        var _args = [];
+        for (var _i = 2; _i < arguments.length; _i++) {
+            _args[_i - 2] = arguments[_i];
+        }
         var text, color;
         if (success) {
             text = '恭喜您，在经历' + arg + '步后终于围住了那只神经猫！';
@@ -257,9 +264,6 @@ var EndScene = (function (_super) {
     };
     EndScene.prototype._drawBtn = function () {
         var img = Resources.getImage(PLAY_IMG);
-        if (!img) {
-            throw 'img load failure';
-        }
         var btn = new createjs.Shape(new createjs.Graphics().beginBitmapFill(img).drawRect(0, 0, img.width, img.height));
         btn.x = (Configs.width - img.width) / 2;
         btn.y = (Configs.height - img.height) / 2;
@@ -600,9 +604,6 @@ var MainScene = (function (_super) {
     };
     MainScene.prototype._drawBtn = function () {
         var img = Resources.getImage(PLAY_IMG);
-        if (!img) {
-            throw 'img load failure';
-        }
         var btn = new createjs.Shape(new createjs.Graphics().beginBitmapFill(img).drawRect(0, 0, img.width, img.height));
         btn.x = (Configs.width - img.width) / 2;
         btn.y = (Configs.height - img.height) / 2;

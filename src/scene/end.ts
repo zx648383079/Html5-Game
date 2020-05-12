@@ -1,12 +1,12 @@
 class EndScene extends Scene {
     protected init(...args: any[]): void {
         super.init();
-        this._drawScore.call(this, args.length > 0 ? args[0] : false);
+        this._drawScore.call(this, ...args);
         this._drawBtn();
         this.setFPS(10);
     }
     
-    private _drawScore(arg: string, success: boolean = false): void {
+    private _drawScore(arg: number = 0, success: boolean = false, ..._args: any[]): void {
         let text: string,
             color: string;
         if (success) {
@@ -24,9 +24,6 @@ class EndScene extends Scene {
     
     private _drawBtn(): void {
         const img = Resources.getImage(PLAY_IMG);
-        if (!img) {
-            throw 'img load failure';
-        }
         const btn = new createjs.Shape(new createjs.Graphics().beginBitmapFill(img).drawRect(0, 0, img.width, img.height));
         btn.x = (Configs.width - img.width) / 2 ;
         btn.y = (Configs.height - img.height) / 2;
