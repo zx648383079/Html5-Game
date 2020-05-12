@@ -18,14 +18,16 @@ class EndScene extends Scene {
         }
         const lable = new createjs.Text( text, 'bold 30px Courier New',  color);
         lable.y = Configs.height / 2 - 170;
-        lable.x = Configs.width / 2 - 300;
+        lable.x = Configs.width / 2;
+        lable.textAlign = 'center';
         this.addChild(lable);
     }
     
     private _drawBtn(): void {
-        const btn = new createjs.Text('START GAME', 'bold 30px Courier New',  '#000');
+        const btn = new createjs.Text('AGAIN', 'bold 30px Courier New',  '#000');
         btn.x = (Configs.width - 30) / 2 ;
         btn.y = (Configs.height - 60) / 2;
+        btn.textAlign = 'center';
         btn.addEventListener('click', this._click.bind(this));
         this.addChild(btn);
     }

@@ -5,8 +5,10 @@ class Resources {
         this.images[id] = img;
     }
     
-    public static getImage(id: string): HTMLImageElement | null {
-        if (this.images[id] == undefined) return null;
+    public static getImage(id: string): HTMLImageElement {
+        if (this.images[id] == undefined) {
+            throw id + ':img load failure';
+        };
         return <HTMLImageElement> this.images[id];
     }
     

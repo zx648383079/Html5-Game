@@ -41,6 +41,6 @@ class LoadScene extends Scene {
             Resources.setImage(image.id , this._loader.getResult(image.id) );
         }
         
-        this.navigate(new GameScene());
+        this.navigate(new MainScene());
     }
 }

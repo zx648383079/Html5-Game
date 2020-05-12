@@ -31,9 +31,10 @@ class GameScene extends Scene {
 
     private isShooting: boolean = false;
 
+    private changeTime: number = 120;
+
     private _level: number = 1;
 
-    
     public get level() : number {
         return this._level;
     }
@@ -41,7 +42,7 @@ class GameScene extends Scene {
 
     public set level(v : number) {
         this._level = v;
-        this.trigger('level');
+        this.trigger(EVENT_LEVEL);
     }
     
     private _amount: number = 9;
@@ -52,7 +53,7 @@ class GameScene extends Scene {
     
     public set amount(v : number) {
         this._amount = v;
-        this.trigger('amount');
+        this.trigger(EVENT_AMOUNT);
     }
     
 
@@ -64,13 +65,15 @@ class GameScene extends Scene {
     
     public set score(v : number) {
         this._score = v;
-        this.trigger('score');
+        this.trigger(EVENT_SCORE);
     }
     
-
+    /**
+     * 触发事件
+     */
     private events: any = {};
 
-    public init(): void {
+    protected init(): void {
         super.init();
         this.createAmount();
         this.createLevel();
@@ -78,16 +81,40 @@ class GameScene extends Scene {
         this.createBoom();
         this.createTarget();
         this.setFPS();
-        // window.hit = (ro: number) => {
-        //     this.trigger('boom.hit', ro);
-        // };
     }
 
     public update() {
         this.targetBox.rotation += this.rotationSpeed;
+        this.randomSpeed();
         super.update();
     }
 
+    /**
+     * 随机调整方向 
+     */
+    private randomSpeed() {
+        this.changeTime --;
+        if (this.changeTime > 0) {
+            return;
+        }
+        this.changeTime = Math.max(200 - this.level * 5, 30) + Math.floor(Math.random() * 50);
+        if (this.level < 3) {
+            return;
+        }
+        this.rotationSpeed *= -1;
+    }
+
+    /**
+     * 过关动画
+     */
+    private passLevel() {
+
+        this.nextLevel();
+    }
+
+    /**
+     * 下一关
+     */
     private nextLevel() {
         this.level ++;
         this.amount = Math.max(1, 9 + Math.floor(this.level / 10 - 1));
@@ -103,9 +130,9 @@ class GameScene extends Scene {
         for (let i = 1; i < random; i++) {
             let r = Math.floor(Math.random() * 180)
             r = Math.random() < .5 ? r * -1 : r
-            this.trigger('boom.hit', r);
+            this.trigger(EVENT_BOOM_HIT, r);
         }
-        this.trigger('boom.reset');
+        this.trigger(EVENT_BOOM_RESET);
     }
 
     /**
@@ -139,17 +166,20 @@ class GameScene extends Scene {
                     .call(() => {
                         if (this.amount < 1) {
                             // 下一关
-                            this.nextLevel();
+                            this.passLevel();
                             return;
                         }
-                        this.trigger('boom.reset');
+                        this.trigger(EVENT_BOOM_RESET);
                     })
                 this.boom.alpha = 0;
-                this.trigger('boom.hit', rotation);
+                this.trigger(EVENT_BOOM_HIT, rotation);
                 this.score ++;
             });
     }
 
+    /**
+     * 击飞飞镖
+     */
     private flickBoom() {
         createjs.Tween.get(this.boom)
             .to({ x: Configs.width + 100, y: Configs.height + 100, rotation: 720 }, 700, createjs.Ease.bounceOut)
@@ -158,12 +188,14 @@ class GameScene extends Scene {
             });
     }
 
+    /**
+     * 判断这个角度是否有飞镖
+     * @param rotation 
+     */
     private hasBoom(rotation: number): boolean {
         for (const item of this.targetBooms) {
-            if (rotation > item.rotation - 10 && rotation < item.rotation + 10) {
-                return true;
-            }
-            if (Math.abs(rotation - item.rotation) > 350) {
+            const diff = Math.abs(rotation - item.rotation);
+            if (diff < 10 || diff > 350) {
                 return true;
             }
         }
@@ -175,9 +207,6 @@ class GameScene extends Scene {
      */
     private woodBits() {
         const img = Resources.getImage(BITS_OF_WOOD_IMG);
-        if (!img) {
-            throw 'img load failure';
-        }
         const bit = new createjs.Shape(new createjs.Graphics().beginBitmapFill(img).drawRect(0, 0, img.width, img.height));
         const scale = 5 / img.width;
         bit.scaleX = bit.scaleY = scale;
@@ -198,15 +227,12 @@ class GameScene extends Scene {
         }
     }
 
+    /**
+     * 创建靶子
+     */
     private createTarget() {
         const bgImg = Resources.getImage(TARGET_IMG);
-        if (!bgImg) {
-            throw 'img load failure';
-        }
         const img = Resources.getImage(BOOMERANG_IMG);
-        if (!img) {
-            throw 'img load failure';
-        }
         const bg = new createjs.Shape(new createjs.Graphics().beginBitmapFill(bgImg).drawRect(0, 0, bgImg.width, bgImg.height));
         const height = 200, scale = height / bgImg.height;
         const boomOut = 50; // 飞镖露出部分
@@ -230,7 +256,7 @@ class GameScene extends Scene {
         boom.regX = minWidth + 5;
         boom.y = 200;
         boom.x = 150;
-        this.on('boom.hit', (rotation: number) => {
+        this.on(EVENT_BOOM_HIT, (rotation: number) => {
             const boomNew = boom.clone();
             const deg = -rotation * Math.PI / 180;
             boomNew.x = 150 - 50 * Math.sin(deg);
@@ -242,11 +268,11 @@ class GameScene extends Scene {
         });
     }
 
+    /**
+     * 创建飞镖
+     */
     private createBoom() {
         const img = Resources.getImage(BOOMERANG_IMG);
-        if (!img) {
-            throw 'img load failure';
-        }
         this.boom = new createjs.Shape(new createjs.Graphics().beginBitmapFill(img).drawRect(0, 0, img.width, img.height));
         const height = 100, scale = height / img.height;
         this.boom.scaleY = this.boom.scaleX = scale;
@@ -256,7 +282,7 @@ class GameScene extends Scene {
         this.boom.y = y;
         this.addChild(this.boom);
         this.boom.addEventListener('click', this.shoot.bind(this));
-        this.on('boom.reset', () => {
+        this.on(EVENT_BOOM_RESET, () => {
             this.boom.x = x;
             this.boom.y = y;
             this.boom.rotation = 0;
@@ -265,6 +291,9 @@ class GameScene extends Scene {
         });
     }
 
+    /**
+     * 创建分数
+     */
     private createScore() {
         const text = new createjs.Text('得分', "20px Arial", '#fff');
         const score = new createjs.Text(this.score.toString(), "20px Arial", '#fff');
@@ -278,11 +307,14 @@ class GameScene extends Scene {
         this.scoreBox.y = 20;
         this.scoreBox.x = Configs.width / 2 - 40;
         this.addChild(this.scoreBox);
-        this.on('score', () => {
+        this.on(EVENT_SCORE, () => {
             score.text = this.score.toString();
         });
     }
 
+    /**
+     * 创建第几关
+     */
     private createLevel() {
         const label = () => '第 ' + this.level + ' 关';
         const text = new createjs.Text(label(), "20px Arial", '#fff');
@@ -294,18 +326,18 @@ class GameScene extends Scene {
         this.levelBox.addChild(bg, text);
         this.levelBox.y = 20;
         this.addChild(this.levelBox);
-        this.on('level', () => {
+        this.on(EVENT_LEVEL, () => {
             text.text = label();
         });
     }
 
+    /**
+     * 创建剩余飞镖
+     */
     private createAmount() {
         const label = () => 'x' + this.amount;
         const text = new createjs.Text(label(), "20px Arial", "#000");
         const img = Resources.getImage(BOOMERANG_IMG);
-        if (!img) {
-            throw 'img load failure';
-        }
         const boom = new createjs.Shape(new createjs.Graphics().beginBitmapFill(img).drawRect(0, 0, img.width, img.height));
         const height = 50, scale = height / img.height;
         boom.scaleY = boom.scaleX = scale;
@@ -316,9 +348,15 @@ class GameScene extends Scene {
         this.amountBox.x = 20;
         this.amountBox.y = Configs.height - 100 - height;
         this.addChild(this.amountBox);
-        this.on('amount', () => {
+        this.on(EVENT_AMOUNT, () => {
             text.text = label();
         });
+    }
+
+    public close(): void {
+        this.events = [];
+        this.boom.removeAllEventListeners();
+        super.close();
     }
 
     public on(event: string, callback: Function): this {

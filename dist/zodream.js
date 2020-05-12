@@ -26,8 +26,10 @@ var Resources = (function () {
         this.images[id] = img;
     };
     Resources.getImage = function (id) {
-        if (this.images[id] == undefined)
-            return null;
+        if (this.images[id] == undefined) {
+            throw id + ':img load failure';
+        }
+        ;
         return this.images[id];
     };
     Resources.sounds = function (id) {
@@ -111,7 +113,6 @@ var Scene = (function () {
         this.stage.update();
     };
     Scene.prototype.close = function () {
-        createjs.Ticker.reset();
         this.stage.removeAllChildren();
     };
     Scene.prototype.navigate = function (arg) {
@@ -132,6 +133,11 @@ var Scene = (function () {
 var BITS_OF_WOOD_IMG = 'bits';
 var BOOMERANG_IMG = 'boomerang';
 var TARGET_IMG = 'target';
+var EVENT_LEVEL = 'level';
+var EVENT_AMOUNT = 'amount';
+var EVENT_SCORE = 'score';
+var EVENT_BOOM_HIT = 'boom.hit';
+var EVENT_BOOM_RESET = 'boom.reset';
 var EndScene = (function (_super) {
     __extends(EndScene, _super);
     function EndScene() {
@@ -166,13 +172,15 @@ var EndScene = (function (_super) {
         }
         var lable = new createjs.Text(text, 'bold 30px Courier New', color);
         lable.y = Configs.height / 2 - 170;
-        lable.x = Configs.width / 2 - 300;
+        lable.x = Configs.width / 2;
+        lable.textAlign = 'center';
         this.addChild(lable);
     };
     EndScene.prototype._drawBtn = function () {
-        var btn = new createjs.Text('START GAME', 'bold 30px Courier New', '#000');
+        var btn = new createjs.Text('AGAIN', 'bold 30px Courier New', '#000');
         btn.x = (Configs.width - 30) / 2;
         btn.y = (Configs.height - 60) / 2;
+        btn.textAlign = 'center';
         btn.addEventListener('click', this._click.bind(this));
         this.addChild(btn);
     };
@@ -188,6 +196,7 @@ var GameScene = (function (_super) {
         _this.targetBooms = [];
         _this.rotationSpeed = 1;
         _this.isShooting = false;
+        _this.changeTime = 120;
         _this._level = 1;
         _this._amount = 9;
         _this._score = 0;
@@ -200,7 +209,7 @@ var GameScene = (function (_super) {
         },
         set: function (v) {
             this._level = v;
-            this.trigger('level');
+            this.trigger(EVENT_LEVEL);
         },
         enumerable: true,
         configurable: true
@@ -211,7 +220,7 @@ var GameScene = (function (_super) {
         },
         set: function (v) {
             this._amount = v;
-            this.trigger('amount');
+            this.trigger(EVENT_AMOUNT);
         },
         enumerable: true,
         configurable: true
@@ -222,7 +231,7 @@ var GameScene = (function (_super) {
         },
         set: function (v) {
             this._score = v;
-            this.trigger('score');
+            this.trigger(EVENT_SCORE);
         },
         enumerable: true,
         configurable: true
@@ -238,7 +247,22 @@ var GameScene = (function (_super) {
     };
     GameScene.prototype.update = function () {
         this.targetBox.rotation += this.rotationSpeed;
+        this.randomSpeed();
         _super.prototype.update.call(this);
+    };
+    GameScene.prototype.randomSpeed = function () {
+        this.changeTime--;
+        if (this.changeTime > 0) {
+            return;
+        }
+        this.changeTime = Math.max(200 - this.level * 5, 30) + Math.floor(Math.random() * 50);
+        if (this.level < 3) {
+            return;
+        }
+        this.rotationSpeed *= -1;
+    };
+    GameScene.prototype.passLevel = function () {
+        this.nextLevel();
     };
     GameScene.prototype.nextLevel = function () {
         this.level++;
@@ -256,9 +280,9 @@ var GameScene = (function (_super) {
         for (var i = 1; i < random; i++) {
             var r = Math.floor(Math.random() * 180);
             r = Math.random() < .5 ? r * -1 : r;
-            this.trigger('boom.hit', r);
+            this.trigger(EVENT_BOOM_HIT, r);
         }
-        this.trigger('boom.reset');
+        this.trigger(EVENT_BOOM_RESET);
     };
     GameScene.prototype.shoot = function () {
         var _this = this;
@@ -288,13 +312,13 @@ var GameScene = (function (_super) {
                 .to({ x: x, y: y }, 20, createjs.Ease.bounceInOut)
                 .call(function () {
                 if (_this.amount < 1) {
-                    _this.nextLevel();
+                    _this.passLevel();
                     return;
                 }
-                _this.trigger('boom.reset');
+                _this.trigger(EVENT_BOOM_RESET);
             });
             _this.boom.alpha = 0;
-            _this.trigger('boom.hit', rotation);
+            _this.trigger(EVENT_BOOM_HIT, rotation);
             _this.score++;
         });
     };
@@ -309,10 +333,8 @@ var GameScene = (function (_super) {
     GameScene.prototype.hasBoom = function (rotation) {
         for (var _i = 0, _a = this.targetBooms; _i < _a.length; _i++) {
             var item = _a[_i];
-            if (rotation > item.rotation - 10 && rotation < item.rotation + 10) {
-                return true;
-            }
-            if (Math.abs(rotation - item.rotation) > 350) {
+            var diff = Math.abs(rotation - item.rotation);
+            if (diff < 10 || diff > 350) {
                 return true;
             }
         }
@@ -321,9 +343,6 @@ var GameScene = (function (_super) {
     GameScene.prototype.woodBits = function () {
         var _this = this;
         var img = Resources.getImage(BITS_OF_WOOD_IMG);
-        if (!img) {
-            throw 'img load failure';
-        }
         var bit = new createjs.Shape(new createjs.Graphics().beginBitmapFill(img).drawRect(0, 0, img.width, img.height));
         var scale = 5 / img.width;
         bit.scaleX = bit.scaleY = scale;
@@ -350,13 +369,7 @@ var GameScene = (function (_super) {
     GameScene.prototype.createTarget = function () {
         var _this = this;
         var bgImg = Resources.getImage(TARGET_IMG);
-        if (!bgImg) {
-            throw 'img load failure';
-        }
         var img = Resources.getImage(BOOMERANG_IMG);
-        if (!img) {
-            throw 'img load failure';
-        }
         var bg = new createjs.Shape(new createjs.Graphics().beginBitmapFill(bgImg).drawRect(0, 0, bgImg.width, bgImg.height));
         var height = 200, scale = height / bgImg.height;
         var boomOut = 50;
@@ -378,7 +391,7 @@ var GameScene = (function (_super) {
         boom.regX = minWidth + 5;
         boom.y = 200;
         boom.x = 150;
-        this.on('boom.hit', function (rotation) {
+        this.on(EVENT_BOOM_HIT, function (rotation) {
             var boomNew = boom.clone();
             var deg = -rotation * Math.PI / 180;
             boomNew.x = 150 - 50 * Math.sin(deg);
@@ -392,9 +405,6 @@ var GameScene = (function (_super) {
     GameScene.prototype.createBoom = function () {
         var _this = this;
         var img = Resources.getImage(BOOMERANG_IMG);
-        if (!img) {
-            throw 'img load failure';
-        }
         this.boom = new createjs.Shape(new createjs.Graphics().beginBitmapFill(img).drawRect(0, 0, img.width, img.height));
         var height = 100, scale = height / img.height;
         this.boom.scaleY = this.boom.scaleX = scale;
@@ -404,7 +414,7 @@ var GameScene = (function (_super) {
         this.boom.y = y;
         this.addChild(this.boom);
         this.boom.addEventListener('click', this.shoot.bind(this));
-        this.on('boom.reset', function () {
+        this.on(EVENT_BOOM_RESET, function () {
             _this.boom.x = x;
             _this.boom.y = y;
             _this.boom.rotation = 0;
@@ -426,7 +436,7 @@ var GameScene = (function (_super) {
         this.scoreBox.y = 20;
         this.scoreBox.x = Configs.width / 2 - 40;
         this.addChild(this.scoreBox);
-        this.on('score', function () {
+        this.on(EVENT_SCORE, function () {
             score.text = _this.score.toString();
         });
     };
@@ -442,7 +452,7 @@ var GameScene = (function (_super) {
         this.levelBox.addChild(bg, text);
         this.levelBox.y = 20;
         this.addChild(this.levelBox);
-        this.on('level', function () {
+        this.on(EVENT_LEVEL, function () {
             text.text = label();
         });
     };
@@ -451,9 +461,6 @@ var GameScene = (function (_super) {
         var label = function () { return 'x' + _this.amount; };
         var text = new createjs.Text(label(), "20px Arial", "#000");
         var img = Resources.getImage(BOOMERANG_IMG);
-        if (!img) {
-            throw 'img load failure';
-        }
         var boom = new createjs.Shape(new createjs.Graphics().beginBitmapFill(img).drawRect(0, 0, img.width, img.height));
         var height = 50, scale = height / img.height;
         boom.scaleY = boom.scaleX = scale;
@@ -464,9 +471,14 @@ var GameScene = (function (_super) {
         this.amountBox.x = 20;
         this.amountBox.y = Configs.height - 100 - height;
         this.addChild(this.amountBox);
-        this.on('amount', function () {
+        this.on(EVENT_AMOUNT, function () {
             text.text = label();
         });
+    };
+    GameScene.prototype.close = function () {
+        this.events = [];
+        this.boom.removeAllEventListeners();
+        _super.prototype.close.call(this);
     };
     GameScene.prototype.on = function (event, callback) {
         this.events[event] = callback;
@@ -525,7 +537,7 @@ var LoadScene = (function (_super) {
             var image = Configs.resources[i];
             Resources.setImage(image.id, this._loader.getResult(image.id));
         }
-        this.navigate(new GameScene());
+        this.navigate(new MainScene());
     };
     return LoadScene;
 }(Scene));
@@ -543,11 +555,12 @@ var MainScene = (function (_super) {
         var btn = new createjs.Text('START GAME', 'bold 30px Courier New', '#000');
         btn.x = (Configs.width - 30) / 2;
         btn.y = (Configs.height - 60) / 2;
+        btn.textAlign = 'center';
         btn.addEventListener('click', this._click.bind(this));
         this.addChild(btn);
     };
     MainScene.prototype._click = function () {
-        this.navigate(new MainScene());
+        this.navigate(new GameScene());
     };
     return MainScene;
 }(Scene));
