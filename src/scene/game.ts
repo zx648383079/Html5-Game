@@ -1,7 +1,3 @@
-interface IBoomRange {
-    boom: createjs.Shape,
-    rotation: number
-}
 
 class GameScene extends Scene {
 
@@ -10,28 +6,28 @@ class GameScene extends Scene {
      */
     private levelBox!: createjs.Container;
     /**
-     * 飞镖剩余数量
+     * 下一个方块
      */
-    private amountBox!: createjs.Container;
+    private nextBox!: createjs.Container;
     /**
      * 分数
      */
     private scoreBox!: createjs.Container;
 
-    private targetBox!: createjs.Container;
+    private mainBox!: createjs.Container;
 
-    private targetBooms: IBoomRange[] = [];
+    private current!: MiniMap;
 
-    private boom!: createjs.Shape;
+    private cells!: MapShape;
+
+    private status: number = 0;
+
+    private levelScore: number = 0;
 
     /**
      * 旋转速度
      */
-    private rotationSpeed: number = 1;
-
-    private isShooting: boolean = false;
-
-    private changeTime: number = 120;
+    private speed: number = 1;
 
     private _level: number = 1;
 
@@ -44,18 +40,6 @@ class GameScene extends Scene {
         this._level = v;
         this.trigger(EVENT_LEVEL);
     }
-    
-    private _amount: number = 9;
-
-    public get amount() : number {
-        return this._amount;
-    }
-    
-    public set amount(v : number) {
-        this._amount = v;
-        this.trigger(EVENT_AMOUNT);
-    }
-    
 
     private _score: number = 0;
 
@@ -68,40 +52,193 @@ class GameScene extends Scene {
         this.trigger(EVENT_SCORE);
     }
     
-    /**
-     * 触发事件
-     */
-    private events: any = {};
+    
 
     protected init(): void {
         super.init();
-        this.createAmount();
         this.createLevel();
         this.createScore();
-        this.createBoom();
-        this.createTarget();
+        this.createNext();
+        this.createBox();
         this.setFPS();
+        this.trigger(EVENT_NEXT);
+        this.addKeyEvent(event => {
+            event.stopPropagation();
+            if (this.status > 1) {
+                return;
+            }
+            switch (event.key) {
+                case ' ':
+                    // 变换
+                    this.rotate();
+                    break;
+                case 'ArrowDown':
+                case 's':
+                case 'S':
+                    // 下
+                    this.status = 1;
+                    this.moveDown(10);
+                    this.status = 0;
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                case 'D':
+                    // 右
+                    this.moveRight();
+                    break;
+                case 'ArrowLeft':
+                case 'a':
+                case 'A':
+                    // 左
+                    this.moveLeft();
+                    break;
+                default:
+                    break;
+            }
+        });
     }
 
     public update() {
-        this.targetBox.rotation += this.rotationSpeed;
-        this.randomSpeed();
+        if (this.status < 1) {
+            this.moveDown();
+        }
         super.update();
     }
 
     /**
-     * 随机调整方向 
+     * 旋转方块
      */
-    private randomSpeed() {
-        this.changeTime --;
-        if (this.changeTime > 0) {
+    private rotate() {
+        this.current.rotateCell();
+        const [x, y] = this.current.getPositionIndex();
+        if (x < 0) {
+            if (this.current.leftSpace > 0) {
+                return;
+            }
+            this.current.x = 0;
             return;
         }
-        this.changeTime = Math.max(200 - this.level * 5, 30) + Math.floor(Math.random() * 50);
-        if (this.level < 3) {
+        const columns = this.cells.columns - 4;
+        if (this.current.rightSpace > 0) {
             return;
         }
-        this.rotationSpeed *= -1;
+        if (x > columns) {
+            this.current.setPositionIndex(columns, y);
+        }
+    }
+
+    /**
+     * 下移
+     * @param speed 
+     */
+    private moveDown(speed: number = 0) {
+        if (!this.canDown()) {
+            this.trigger(EVENT_FIXED);
+            this.removeCell();
+            if (this.cells.rowEq(0)) {
+                this.trigger(EVENT_NEXT);
+            } else {
+                // 游戏结束
+                this.status = 2;
+                this.navigate(new EndScene(), this.score);
+                return;
+            }
+        }
+        this.current.y = this.getCanDownY(speed + this.speed, this.current.y);
+    }
+
+    /**
+     * 修正下一个可移动的位置
+     * @param y 
+     */
+    private getCanDownY(diff: number, y: number) {
+        if (diff > this.current.cellHeight) {
+            diff = this.current.cellHeight;
+        }
+        const rows = this.cells.rows + this.current.bottomSpace;
+        const newY = Math.floor((y + diff) / this.current.cellHeight);
+        if (newY >= rows) {
+            return rows * this.current.cellHeight;
+        }
+        const [x, ] = this.current.getPositionIndex();
+        if (this.cells.hasOver(this.current, x, newY - 3)) {
+            return newY * this.current.cellHeight;
+        }
+        return y + diff;
+    }
+
+    private moveRight() {
+        const [x, y] = this.current.getPositionIndex();
+        const columns = this.cells.columns - 4 + this.current.rightSpace;
+        if (x >= columns) {
+            return;
+        }
+        if (this.cells.hasOver(this.current, x + 1, y - 3)) {
+            return;
+        }
+        this.current.x += this.current.cellWidth;
+    }
+
+    private moveLeft() {
+        const [x, y] = this.current.getPositionIndex();
+        const newX = x + this.current.leftSpace;
+        if (newX <= 0) {
+            return;
+        }
+        if (this.cells.hasOver(this.current, x - 1, y - 3)) {
+            return;
+        }
+        this.current.x -= this.current.cellWidth;
+    }
+
+    /**
+     * 移除行
+     */
+    private removeCell() {
+        let diff = 0;
+        let y = this.cells.rows;
+        const emptyRows: number[] = [];
+        let isBefore = false; // 当前行是否是已经换过了
+        while (y >= 0) {
+            y --;
+            const isSame = emptyRows.indexOf(y) < 0 && this.cells.rowEq(y, 1);
+            if (isSame) {
+                diff ++;
+                isBefore = true;
+            } else if (isBefore) {
+                isBefore = false;
+                continue;
+            }
+            if (y - diff < 0) {
+                break;
+            }
+            if (diff > 0) {
+                this.cells.rowMove(y, y - diff);
+                emptyRows.push(y - diff);
+            }
+            if (isSame) {
+                y ++; // 重新检测当前行
+            }
+        }
+        this.score += diff;
+        this.levelScore += diff;
+        if (this.levelScore > 50) {
+            this.passLevel();
+            return;
+        }
+        this.cells.update();
+    }
+
+    private canDown() {
+        if (this.current.y % 30 > 0) {
+            return true;
+        }
+        const [x, y] = this.current.getPositionIndex();
+        const rows = this.cells.rows + this.current.bottomSpace;
+        if (y >= rows) {
+            return false;
+        }
+        return !this.cells.hasOver(this.current, x, y - 3);
     }
 
     /**
@@ -117,177 +254,44 @@ class GameScene extends Scene {
      */
     private nextLevel() {
         this.level ++;
-        this.amount = Math.max(1, 9 + Math.floor(this.level / 10 - 1));
-        this.rotationSpeed = this.level % 3 === 0 && Math.random() < 0.1 ? this.rotationSpeed * -1 : this.rotationSpeed;
-        for (const item of this.targetBooms) {
-            this.targetBox.removeChild(item.boom);
-        }
-        this.targetBooms = [];
-        const random = Math.floor(Math.random() * this.level)
-        if (random >= this.level / 2) {
-            this.amount -= Math.floor(Math.random() * this.level / 2 + 1)
-        }
-        for (let i = 1; i < random; i++) {
-            let r = Math.floor(Math.random() * 180)
-            r = Math.random() < .5 ? r * -1 : r
-            this.trigger(EVENT_BOOM_HIT, r);
-        }
-        this.trigger(EVENT_BOOM_RESET);
+        this.speed += 1;
+        this.cells.reset();
+        this.trigger(EVENT_FIXED);
     }
 
-    /**
-     * 射击
-     */
-    private shoot() {
-        if (this.isShooting || this.amount < 1) {
-            return;
-        }
-        this.isShooting = true;
-        this.amount --;
-        createjs.Tween.get(this.boom)
-            .to({
-                y: 350
-            }, 150, createjs.Ease.cubicIn)
-            .call(() => {
-                let rotation = this.targetBox.rotation % 360;
-                if (rotation < 0) {
-                    rotation = 360 + rotation;
-                }
-                if (this.hasBoom(rotation)) {
-                    this.flickBoom();
-                    return;
-                }
-                this.woodBits();
-                const x = this.targetBox.x
-                const y = this.targetBox.y
-                createjs.Tween.get(this.targetBox)
-                    .to({ x: x - 6, y: y - 7 }, 20, createjs.Ease.bounceInOut)
-                    .to({ x, y}, 20, createjs.Ease.bounceInOut)
-                    .call(() => {
-                        if (this.amount < 1) {
-                            // 下一关
-                            this.passLevel();
-                            return;
-                        }
-                        this.trigger(EVENT_BOOM_RESET);
-                    })
-                this.boom.alpha = 0;
-                this.trigger(EVENT_BOOM_HIT, rotation);
-                this.score ++;
-            });
+    private createNext() {
+        const bg = new createjs.Shape(new createjs.Graphics().beginFill('gray').drawRect(0, 0, 120, 120));
+        const cell = new MiniMap(Utils.random(6), Utils.random(3));
+        this.nextBox = new createjs.Container();
+        this.nextBox.addChild(bg, cell);
+        this.nextBox.y = 300;
+        this.nextBox.x = 500;
+        this.addChild(this.nextBox);
+        this.on(EVENT_NEXT, () => {
+            this.current.copy(cell);
+            let min = 0 - this.current.leftSpace, max = 10 + this.current.rightSpace;
+            let y =  this.current.bottomSpace;
+            this.current.setPositionIndex(Utils.random(min, max), y);
+            cell.generateCells(Utils.random(6), Utils.random(3));
+        })
     }
 
-    /**
-     * 击飞飞镖
-     */
-    private flickBoom() {
-        createjs.Tween.get(this.boom)
-            .to({ x: Configs.width + 100, y: Configs.height + 100, rotation: 720 }, 700, createjs.Ease.bounceOut)
-            .call(() => {
-                this.navigate(new EndScene(), this.score);
-            });
-    }
-
-    /**
-     * 判断这个角度是否有飞镖
-     * @param rotation 
-     */
-    private hasBoom(rotation: number): boolean {
-        for (const item of this.targetBooms) {
-            const diff = Math.abs(rotation - item.rotation);
-            if (diff < 10 || diff > 350) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    /**
-     * 木屑
-     */
-    private woodBits() {
-        const img = Resources.getImage(BITS_OF_WOOD_IMG);
-        const bit = new createjs.Shape(new createjs.Graphics().beginBitmapFill(img).drawRect(0, 0, img.width, img.height));
-        const scale = 5 / img.width;
-        bit.scaleX = bit.scaleY = scale;
-        const maxWidth = Configs.width;
-        const maxHeight = Configs.height;
-        bit.x = maxWidth / 2 - 1;
-        bit.y = 250;
-        for (let i = 0; i < 4; i++) {
-            const bitNew = bit.clone();
-            this.addChild(bitNew)
-            let random = Math.floor(Math.random() * maxWidth * 2)
-            random = Math.random() < .5 ? random * -1 : random
-            createjs.Tween.get(bitNew)
-                .to({ x: random, y: maxHeight }, 500, createjs.Ease.sineOut)
-                .call(() => {
-                    this.removeChild(bitNew)
-                })
-        }
-    }
-
-    /**
-     * 创建靶子
-     */
-    private createTarget() {
-        const bgImg = Resources.getImage(TARGET_IMG);
-        const img = Resources.getImage(BOOMERANG_IMG);
-        const bg = new createjs.Shape(new createjs.Graphics().beginBitmapFill(bgImg).drawRect(0, 0, bgImg.width, bgImg.height));
-        const height = 200, scale = height / bgImg.height;
-        const boomOut = 50; // 飞镖露出部分
-        //const boomIn = 50; // 飞镖插入部分
-        bg.y = bg.x = boomOut;
-        bg.scaleX = bg.scaleY = scale;
-        this.targetBox = new createjs.Container();
-        this.targetBox.addChild(bg);
-        this.targetBox.y = 250;
-        this.targetBox.regX = 150;
-        this.targetBox.regY = 150;
-        this.targetBox.x = Configs.width / 2;
-        this.addChild(this.targetBox);
-        this.targetBox.setChildIndex(bg, 100);
-
-        const boomHeight = 100, boomScale = boomHeight / img.height;
-        const minWidth = boomScale * img.width;
-        const boom = new createjs.Shape(new createjs.Graphics().beginBitmapFill(img).drawRect(0, 0, img.width, img.height));
-        boom.scaleX = boom.scaleY = boomScale;
-        boom.regY = 0;
-        boom.regX = minWidth + 5;
-        boom.y = 200;
-        boom.x = 150;
-        this.on(EVENT_BOOM_HIT, (rotation: number) => {
-            const boomNew = boom.clone();
-            const deg = -rotation * Math.PI / 180;
-            boomNew.x = 150 - 50 * Math.sin(deg);
-            boomNew.y = 150 + 50 * Math.cos(deg);
-            boomNew.rotation = -rotation;
-            this.targetBox.addChild(boomNew)
-            this.targetBooms.push({boom: boomNew, rotation});
-            this.targetBox.setChildIndex(boomNew, 0);
-        });
-    }
-
-    /**
-     * 创建飞镖
-     */
-    private createBoom() {
-        const img = Resources.getImage(BOOMERANG_IMG);
-        this.boom = new createjs.Shape(new createjs.Graphics().beginBitmapFill(img).drawRect(0, 0, img.width, img.height));
-        const height = 100, scale = height / img.height;
-        this.boom.scaleY = this.boom.scaleX = scale;
-        const x = (Configs.width - img.width * scale) / 2;
-        const y = Configs.height - 100 - height;
-        this.boom.x = x;
-        this.boom.y = y;
-        this.addChild(this.boom);
-        this.boom.addEventListener('click', this.shoot.bind(this));
-        this.on(EVENT_BOOM_RESET, () => {
-            this.boom.x = x;
-            this.boom.y = y;
-            this.boom.rotation = 0;
-            this.boom.alpha = 1;
-            this.isShooting = false;
+    private createBox() {
+        const bg = new createjs.Shape(new createjs.Graphics().beginFill('gray').drawRect(0, 0, 420, 600));
+        this.current = new MiniMap(-1, 0);
+        this.cells = new MapShape(20, 14);
+        bg.y = this.cells.y = 120;
+        this.mainBox = new createjs.Container();
+        this.mainBox.addChild(bg, this.current, this.cells);
+        this.mainBox.y = 0;
+        this.mainBox.x = 50;
+        
+        this.addChild(this.mainBox);
+        const mask = new createjs.Shape(new createjs.Graphics().beginFill("#ffffff").drawRect(this.mainBox.x, this.mainBox.y + 120, 420, 600));
+        this.mainBox.mask = mask;
+        this.on(EVENT_FIXED, () => {
+            const [x, y] = this.current.getPositionIndex();
+            this.cells.copyCell(this.current, x, y - 4);
         });
     }
 
@@ -305,7 +309,7 @@ class GameScene extends Scene {
         this.scoreBox = new createjs.Container();
         this.scoreBox.addChild(bg, text, score);
         this.scoreBox.y = 20;
-        this.scoreBox.x = Configs.width / 2 - 40;
+        this.scoreBox.x = this.width / 2 - 40;
         this.addChild(this.scoreBox);
         this.on(EVENT_SCORE, () => {
             score.text = this.score.toString();
@@ -331,48 +335,8 @@ class GameScene extends Scene {
         });
     }
 
-    /**
-     * 创建剩余飞镖
-     */
-    private createAmount() {
-        const label = () => 'x' + this.amount;
-        const text = new createjs.Text(label(), "20px Arial", "#000");
-        const img = Resources.getImage(BOOMERANG_IMG);
-        const boom = new createjs.Shape(new createjs.Graphics().beginBitmapFill(img).drawRect(0, 0, img.width, img.height));
-        const height = 50, scale = height / img.height;
-        boom.scaleY = boom.scaleX = scale;
-        text.x = img.width * scale + 10;
-        text.y = height / 2 - 5;
-        this.amountBox = new createjs.Container();
-        this.amountBox.addChild(text, boom);
-        this.amountBox.x = 20;
-        this.amountBox.y = Configs.height - 100 - height;
-        this.addChild(this.amountBox);
-        this.on(EVENT_AMOUNT, () => {
-            text.text = label();
-        });
-    }
-
     public close(): void {
-        this.events = [];
-        this.boom.removeAllEventListeners();
         super.close();
-    }
-
-    public on(event: string, callback: Function): this {
-        this.events[event] = callback;
-        return this;
-    }
-
-    public hasEvent(event: string): boolean {
-        return this.events.hasOwnProperty(event);
-    }
-
-    public trigger(event: string, ... args: any[]) {
-        if (!this.hasEvent(event)) {
-            return;
-        }
-        return this.events[event].call(this, ...args);
     }
 }
 

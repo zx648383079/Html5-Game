@@ -9,7 +9,7 @@ gulp.task('copy', async() => {
 });
 
 gulp.task('default', gulp.series('copy', async() => {
-    await gulp.src(['src/core/*.ts', 'src/scene/*.ts', 'src/*.ts'])
+    await gulp.src(['src/core/*.ts', 'src/ui/*.ts', 'src/scene/*.ts', 'src/*.ts'])
         .pipe(concat('zodream.ts'))
         .pipe(tsProject())
         .pipe(gulp.dest('dist/'));

@@ -45,12 +45,35 @@ var Scene = (function () {
         for (var _i = 1; _i < arguments.length; _i++) {
             arg[_i - 1] = arguments[_i];
         }
+        this.eventDispatcher = new createjs.EventDispatcher();
+        this.keyListener = [];
         if (stage == undefined) {
             return;
         }
         this.setStage(stage);
         this.init.apply(this, arg);
     }
+    Object.defineProperty(Scene.prototype, "width", {
+        get: function () {
+            return this.stage.canvas.width;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Scene.prototype, "height", {
+        get: function () {
+            return this.stage.canvas.height;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Scene.prototype, "size", {
+        get: function () {
+            return { width: this.width, height: this.height };
+        },
+        enumerable: true,
+        configurable: true
+    });
     Scene.prototype.init = function () {
         var _arg = [];
         for (var _i = 0; _i < arguments.length; _i++) {
@@ -75,7 +98,7 @@ var Scene = (function () {
             param[_i - 1] = arguments[_i];
         }
         if (arg instanceof Program) {
-            this.stage = arg.getStage();
+            this.application = arg;
         }
         this.stage = arg instanceof Program ? arg.getStage() : arg;
         this.init.apply(this, param);
@@ -84,6 +107,7 @@ var Scene = (function () {
         this.stage.addEventListener(name, func);
     };
     Scene.prototype.addKeyEvent = function (func) {
+        this.keyListener.push(func);
         return window.addEventListener('keydown', func);
     };
     Scene.prototype.addChild = function () {
@@ -112,8 +136,15 @@ var Scene = (function () {
     Scene.prototype.update = function () {
         this.stage.update();
     };
+    Scene.prototype.resize = function () {
+        this.update();
+    };
     Scene.prototype.close = function () {
+        this.eventDispatcher.removeAllEventListeners();
         this.stage.removeAllChildren();
+        this.keyListener.forEach(function (item) {
+            window.removeEventListener('keydown', item);
+        });
     };
     Scene.prototype.navigate = function (arg) {
         var _a;
@@ -128,16 +159,375 @@ var Scene = (function () {
         this.close();
         arg.setStage.apply(arg, __spreadArrays([this.stage], param));
     };
+    Scene.prototype.on = function (event, callback) {
+        var _this = this;
+        this.eventDispatcher.addEventListener(event, function (obj) {
+            callback.call.apply(callback, __spreadArrays([_this], obj.data));
+        });
+        return this;
+    };
+    Scene.prototype.trigger = function (event) {
+        var args = [];
+        for (var _i = 1; _i < arguments.length; _i++) {
+            args[_i - 1] = arguments[_i];
+        }
+        if (this.eventDispatcher.hasEventListener(event)) {
+            var eventObj = new createjs.Event(event, false, true);
+            eventObj.data = args;
+            this.eventDispatcher.dispatchEvent(eventObj);
+        }
+        return this;
+    };
     return Scene;
 }());
-var BITS_OF_WOOD_IMG = 'bits';
-var BOOMERANG_IMG = 'boomerang';
-var TARGET_IMG = 'target';
+var EVENT_RESIZE = 'resize';
 var EVENT_LEVEL = 'level';
-var EVENT_AMOUNT = 'amount';
 var EVENT_SCORE = 'score';
-var EVENT_BOOM_HIT = 'boom.hit';
-var EVENT_BOOM_RESET = 'boom.reset';
+var EVENT_NEXT = 'next';
+var EVENT_FIXED = 'fixed';
+var Utils = (function () {
+    function Utils() {
+    }
+    Utils.random = function (min, max) {
+        var _a;
+        if (min === void 0) { min = 0; }
+        if (max === void 0) { max = 1; }
+        if (min > max) {
+            _a = [0, min], min = _a[0], max = _a[1];
+        }
+        return min + Math.floor(Math.random() * (max - min + 1));
+    };
+    return Utils;
+}());
+var MapShape = (function (_super) {
+    __extends(MapShape, _super);
+    function MapShape(rows, columns, cellWidth, cellHeight, color, lineColor) {
+        if (cellWidth === void 0) { cellWidth = 30; }
+        if (cellHeight === void 0) { cellHeight = 30; }
+        if (color === void 0) { color = '#000'; }
+        if (lineColor === void 0) { lineColor = '#fff'; }
+        var _this = _super.call(this, new createjs.Graphics()) || this;
+        _this.rows = rows;
+        _this.columns = columns;
+        _this.cellWidth = cellWidth;
+        _this.cellHeight = cellHeight;
+        _this.color = color;
+        _this.lineColor = lineColor;
+        var maps = [];
+        for (var i = 0; i < rows; i++) {
+            var cells = [];
+            for (var j = 0; j < columns; j++) {
+                cells.push(0);
+            }
+            maps.push(cells);
+        }
+        _this.maps = maps;
+        return _this;
+    }
+    MapShape.prototype.setCell = function (row, column, value) {
+        if (row === void 0) { row = 0; }
+        if (column === void 0) { column = 0; }
+        if (value === void 0) { value = 1; }
+        this.maps[row][column] = value;
+        this.update();
+        return this;
+    };
+    MapShape.prototype.setCells = function (maps, value) {
+        if (value === void 0) { value = 1; }
+        for (var _i = 0, maps_1 = maps; _i < maps_1.length; _i++) {
+            var _a = maps_1[_i], row = _a[0], column = _a[1];
+            this.maps[row][column] = value;
+        }
+        this.update();
+        return this;
+    };
+    MapShape.prototype.setCellIndex = function (index, value) {
+        if (index === void 0) { index = 0; }
+        if (value === void 0) { value = 1; }
+        return this.setCell(Math.floor(index / this.columns), index % this.columns, value);
+    };
+    MapShape.prototype.setCellsIndex = function (maps, value) {
+        if (value === void 0) { value = 1; }
+        for (var _i = 0, maps_2 = maps; _i < maps_2.length; _i++) {
+            var index = maps_2[_i];
+            this.maps[Math.floor(index / this.columns)][index % this.columns] = value;
+        }
+        this.update();
+        return this;
+    };
+    MapShape.prototype.map = function (cb) {
+        var edit = false;
+        for (var i = this.maps.length - 1; i >= 0; i--) {
+            for (var j = this.maps[i].length - 1; j >= 0; j--) {
+                var res = cb(this.maps[i][j], i, j);
+                if (typeof res === 'boolean' && !res) {
+                    return this;
+                }
+                if (typeof res === 'number') {
+                    this.maps[i][j] = res;
+                    edit = true;
+                }
+            }
+        }
+        if (edit) {
+            this.update();
+        }
+        return this;
+    };
+    MapShape.prototype.rowMove = function (row, source) {
+        if (source < 0 || source >= this.maps.length) {
+            return this;
+        }
+        for (var i = this.maps[source].length - 1; i >= 0; i--) {
+            this.maps[row][i] = this.maps[source][i];
+            this.maps[source][i] = 0;
+        }
+        return this;
+    };
+    MapShape.prototype.row = function (row, val) {
+        if (val === void 0) { val = 0; }
+        for (var i = this.maps[row].length - 1; i >= 0; i--) {
+            this.maps[row][i] = val;
+        }
+        return this;
+    };
+    MapShape.prototype.mapRow = function (cb) {
+        var edit = false;
+        for (var i = this.maps.length - 1; i >= 0; i--) {
+            var res = cb(i);
+            if (typeof res === 'boolean' && !res) {
+                return this;
+            }
+            if (typeof res === 'number') {
+                this.row(i, res);
+                edit = true;
+            }
+        }
+        if (edit) {
+            this.update();
+        }
+        return this;
+    };
+    MapShape.prototype.rowEq = function (row, val) {
+        if (row === void 0) { row = 0; }
+        if (val === void 0) { val = 0; }
+        if (row < 0 || row >= this.maps.length) {
+            return false;
+        }
+        for (var i = this.maps[row].length - 1; i >= 0; i--) {
+            if (this.maps[row][i] !== val) {
+                return false;
+            }
+        }
+        return true;
+    };
+    MapShape.prototype.columnEq = function (column, val) {
+        if (column === void 0) { column = 0; }
+        if (val === void 0) { val = 0; }
+        for (var i = this.maps.length - 1; i >= 0; i--) {
+            if (this.maps[i][column] !== val) {
+                return false;
+            }
+        }
+        return true;
+    };
+    MapShape.prototype.hasOver = function (source, startX, startY) {
+        var _this = this;
+        var over = false;
+        source.map(function (val, y, x) {
+            if (val < 1) {
+                return;
+            }
+            var row = startY + y;
+            if (row < 0 || row >= _this.maps.length) {
+                return;
+            }
+            var column = startX + x;
+            if (column < 0 || column >= _this.maps[row].length) {
+                return;
+            }
+            if (_this.maps[row][column] == val) {
+                over = true;
+            }
+        });
+        return over;
+    };
+    MapShape.prototype.update = function () {
+        var _this = this;
+        this.graphics.clear();
+        this.graphics.beginFill(this.color);
+        this.graphics.beginStroke(this.lineColor);
+        this.map(function (val, y, x) {
+            if (val > 0) {
+                _this.graphics.drawRect(x * _this.cellWidth, y * _this.cellHeight, _this.cellWidth, _this.cellHeight);
+            }
+        });
+    };
+    MapShape.prototype.copy = function (source) {
+        var _this = this;
+        source.map(function (val, y, x) {
+            _this.maps[x][y] = val;
+        });
+        this.update();
+        return this;
+    };
+    MapShape.prototype.copyCell = function (source, startX, startY) {
+        var _this = this;
+        source.map(function (val, y, x) {
+            if (val < 1) {
+                return;
+            }
+            var row = startY + y;
+            if (row < 0 || row >= _this.maps.length) {
+                return;
+            }
+            var column = startX + x;
+            if (column < 0 || column >= _this.maps[row].length) {
+                return;
+            }
+            _this.maps[row][column] = val;
+        });
+        this.update();
+        return this;
+    };
+    MapShape.prototype.reset = function () {
+        this.map(function () { return 0; });
+        return this;
+    };
+    return MapShape;
+}(createjs.Shape));
+var CellKind;
+(function (CellKind) {
+    CellKind[CellKind["L"] = 0] = "L";
+    CellKind[CellKind["J"] = 1] = "J";
+    CellKind[CellKind["Z"] = 2] = "Z";
+    CellKind[CellKind["S"] = 3] = "S";
+    CellKind[CellKind["I"] = 4] = "I";
+    CellKind[CellKind["T"] = 5] = "T";
+    CellKind[CellKind["O"] = 6] = "O";
+})(CellKind || (CellKind = {}));
+var MiniMap = (function (_super) {
+    __extends(MiniMap, _super);
+    function MiniMap(kind, rotate, cellWidth, cellHeight, color, lineColor) {
+        if (cellWidth === void 0) { cellWidth = 30; }
+        if (cellHeight === void 0) { cellHeight = 30; }
+        if (color === void 0) { color = '#000'; }
+        if (lineColor === void 0) { lineColor = '#fff'; }
+        var _this = _super.call(this, 4, 4, cellWidth, cellHeight, color, lineColor) || this;
+        _this.kind = kind;
+        _this.rotate = rotate;
+        _this._leftSpace = 0;
+        _this._rightSpace = 0;
+        _this._bottomSpace = 0;
+        if (_this.kind < 0) {
+            return _this;
+        }
+        _this.generateCells(kind, rotate);
+        return _this;
+    }
+    Object.defineProperty(MiniMap.prototype, "leftSpace", {
+        get: function () {
+            return this._leftSpace;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(MiniMap.prototype, "rightSpace", {
+        get: function () {
+            return this._rightSpace;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(MiniMap.prototype, "bottomSpace", {
+        get: function () {
+            return this._bottomSpace;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    MiniMap.prototype.setPositionIndex = function (x, y) {
+        this.x = x * this.cellWidth;
+        this.y = y * this.cellHeight;
+        return this;
+    };
+    MiniMap.prototype.getPositionIndex = function () {
+        return [
+            Math.floor(this.x / this.cellWidth),
+            Math.floor(this.y / this.cellHeight)
+        ];
+    };
+    MiniMap.prototype.rotateCell = function () {
+        this.generateCells(this.kind, this.rotate + 1);
+    };
+    MiniMap.prototype.copy = function (source) {
+        this.kind = source.kind;
+        this.rotate = source.rotate;
+        return _super.prototype.copy.call(this, source);
+    };
+    MiniMap.prototype.update = function () {
+        _super.prototype.update.call(this);
+        this._leftSpace = this.columnEq(0) ? 1 : 0;
+        this._bottomSpace = this._rightSpace = 0;
+        if (this.columnEq(2)) {
+            this._rightSpace = 2;
+        }
+        else if (this.columnEq(3)) {
+            this._rightSpace = 1;
+        }
+        if (this.rowEq(2)) {
+            this._bottomSpace = 2;
+        }
+        else if (this.rowEq(3)) {
+            this._bottomSpace = 1;
+        }
+    };
+    MiniMap.prototype.generateCells = function (kind, rotate) {
+        var _a;
+        if (rotate === void 0) { rotate = 0; }
+        var maps = (_a = {},
+            _a[CellKind.I] = [
+                [1, 5, 9, 13],
+                [4, 5, 6, 7]
+            ],
+            _a[CellKind.L] = [
+                [1, 5, 9, 10],
+                [9, 5, 6, 7],
+                [1, 2, 6, 10],
+                [6, 10, 9, 8],
+            ],
+            _a[CellKind.Z] = [
+                [4, 5, 9, 10],
+                [2, 6, 5, 9],
+            ],
+            _a[CellKind.S] = [
+                [8, 9, 5, 6],
+                [1, 5, 6, 10],
+            ],
+            _a[CellKind.T] = [
+                [1, 4, 5, 6],
+                [1, 5, 9, 6],
+                [4, 5, 9, 6],
+                [5, 2, 6, 10],
+            ],
+            _a[CellKind.O] = [
+                [5, 6, 9, 10],
+            ],
+            _a[CellKind.J] = [
+                [2, 6, 9, 10],
+                [4, 8, 9, 10],
+                [1, 2, 5, 9],
+                [4, 5, 6, 10],
+            ],
+            _a);
+        var map = maps[kind];
+        this.reset();
+        this.kind = kind;
+        this.rotate = rotate % map.length;
+        return this.setCellsIndex(map[this.rotate]);
+    };
+    return MiniMap;
+}(MapShape));
 var EndScene = (function (_super) {
     __extends(EndScene, _super);
     function EndScene() {
@@ -171,18 +561,26 @@ var EndScene = (function (_super) {
             color = '#000';
         }
         var lable = new createjs.Text(text, 'bold 30px Courier New', color);
-        lable.y = Configs.height / 2 - 170;
-        lable.x = Configs.width / 2;
+        lable.y = this.height / 2 - 170;
+        lable.x = this.width / 2;
         lable.textAlign = 'center';
         this.addChild(lable);
+        this.on(EVENT_RESIZE, function (width, height) {
+            lable.y = height / 2 - 170;
+            lable.x = width / 2;
+        });
     };
     EndScene.prototype._drawBtn = function () {
         var btn = new createjs.Text('AGAIN', 'bold 30px Courier New', '#000');
-        btn.x = (Configs.width - 30) / 2;
-        btn.y = (Configs.height - 60) / 2;
+        btn.x = (this.width - 30) / 2;
+        btn.y = (this.height - 60) / 2;
         btn.textAlign = 'center';
         btn.addEventListener('click', this._click.bind(this));
         this.addChild(btn);
+        this.on(EVENT_RESIZE, function (width, height) {
+            btn.x = (width - 30) / 2;
+            btn.y = (height - 60) / 2;
+        });
     };
     EndScene.prototype._click = function () {
         this.navigate(new GameScene());
@@ -193,14 +591,11 @@ var GameScene = (function (_super) {
     __extends(GameScene, _super);
     function GameScene() {
         var _this = _super !== null && _super.apply(this, arguments) || this;
-        _this.targetBooms = [];
-        _this.rotationSpeed = 1;
-        _this.isShooting = false;
-        _this.changeTime = 120;
+        _this.status = 0;
+        _this.levelScore = 0;
+        _this.speed = 1;
         _this._level = 1;
-        _this._amount = 9;
         _this._score = 0;
-        _this.events = {};
         return _this;
     }
     Object.defineProperty(GameScene.prototype, "level", {
@@ -210,17 +605,6 @@ var GameScene = (function (_super) {
         set: function (v) {
             this._level = v;
             this.trigger(EVENT_LEVEL);
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(GameScene.prototype, "amount", {
-        get: function () {
-            return this._amount;
-        },
-        set: function (v) {
-            this._amount = v;
-            this.trigger(EVENT_AMOUNT);
         },
         enumerable: true,
         configurable: true
@@ -237,189 +621,210 @@ var GameScene = (function (_super) {
         configurable: true
     });
     GameScene.prototype.init = function () {
+        var _this = this;
         _super.prototype.init.call(this);
-        this.createAmount();
         this.createLevel();
         this.createScore();
-        this.createBoom();
-        this.createTarget();
+        this.createNext();
+        this.createBox();
         this.setFPS();
+        this.trigger(EVENT_NEXT);
+        this.addKeyEvent(function (event) {
+            event.stopPropagation();
+            if (_this.status > 1) {
+                return;
+            }
+            switch (event.key) {
+                case ' ':
+                    _this.rotate();
+                    break;
+                case 'ArrowDown':
+                case 's':
+                case 'S':
+                    _this.status = 1;
+                    _this.moveDown(10);
+                    _this.status = 0;
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                case 'D':
+                    _this.moveRight();
+                    break;
+                case 'ArrowLeft':
+                case 'a':
+                case 'A':
+                    _this.moveLeft();
+                    break;
+                default:
+                    break;
+            }
+        });
     };
     GameScene.prototype.update = function () {
-        this.targetBox.rotation += this.rotationSpeed;
-        this.randomSpeed();
+        if (this.status < 1) {
+            this.moveDown();
+        }
         _super.prototype.update.call(this);
     };
-    GameScene.prototype.randomSpeed = function () {
-        this.changeTime--;
-        if (this.changeTime > 0) {
+    GameScene.prototype.rotate = function () {
+        this.current.rotateCell();
+        var _a = this.current.getPositionIndex(), x = _a[0], y = _a[1];
+        if (x < 0) {
+            if (this.current.leftSpace > 0) {
+                return;
+            }
+            this.current.x = 0;
             return;
         }
-        this.changeTime = Math.max(200 - this.level * 5, 30) + Math.floor(Math.random() * 50);
-        if (this.level < 3) {
+        var columns = this.cells.columns - 4;
+        if (this.current.rightSpace > 0) {
             return;
         }
-        this.rotationSpeed *= -1;
+        if (x > columns) {
+            this.current.setPositionIndex(columns, y);
+        }
+    };
+    GameScene.prototype.moveDown = function (speed) {
+        if (speed === void 0) { speed = 0; }
+        if (!this.canDown()) {
+            this.trigger(EVENT_FIXED);
+            this.removeCell();
+            if (this.cells.rowEq(0)) {
+                this.trigger(EVENT_NEXT);
+            }
+            else {
+                this.status = 2;
+                this.navigate(new EndScene(), this.score);
+                return;
+            }
+        }
+        this.current.y = this.getCanDownY(speed + this.speed, this.current.y);
+    };
+    GameScene.prototype.getCanDownY = function (diff, y) {
+        if (diff > this.current.cellHeight) {
+            diff = this.current.cellHeight;
+        }
+        var rows = this.cells.rows + this.current.bottomSpace;
+        var newY = Math.floor((y + diff) / this.current.cellHeight);
+        if (newY >= rows) {
+            return rows * this.current.cellHeight;
+        }
+        var x = this.current.getPositionIndex()[0];
+        if (this.cells.hasOver(this.current, x, newY - 3)) {
+            return newY * this.current.cellHeight;
+        }
+        return y + diff;
+    };
+    GameScene.prototype.moveRight = function () {
+        var _a = this.current.getPositionIndex(), x = _a[0], y = _a[1];
+        var columns = this.cells.columns - 4 + this.current.rightSpace;
+        if (x >= columns) {
+            return;
+        }
+        if (this.cells.hasOver(this.current, x + 1, y - 3)) {
+            return;
+        }
+        this.current.x += this.current.cellWidth;
+    };
+    GameScene.prototype.moveLeft = function () {
+        var _a = this.current.getPositionIndex(), x = _a[0], y = _a[1];
+        var newX = x + this.current.leftSpace;
+        if (newX <= 0) {
+            return;
+        }
+        if (this.cells.hasOver(this.current, x - 1, y - 3)) {
+            return;
+        }
+        this.current.x -= this.current.cellWidth;
+    };
+    GameScene.prototype.removeCell = function () {
+        var diff = 0;
+        var y = this.cells.rows;
+        var emptyRows = [];
+        var isBefore = false;
+        while (y >= 0) {
+            y--;
+            var isSame = emptyRows.indexOf(y) < 0 && this.cells.rowEq(y, 1);
+            if (isSame) {
+                diff++;
+                isBefore = true;
+            }
+            else if (isBefore) {
+                isBefore = false;
+                continue;
+            }
+            if (y - diff < 0) {
+                break;
+            }
+            if (diff > 0) {
+                this.cells.rowMove(y, y - diff);
+                emptyRows.push(y - diff);
+            }
+            if (isSame) {
+                y++;
+            }
+        }
+        this.score += diff;
+        this.levelScore += diff;
+        if (this.levelScore > 50) {
+            this.passLevel();
+            return;
+        }
+        this.cells.update();
+    };
+    GameScene.prototype.canDown = function () {
+        if (this.current.y % 30 > 0) {
+            return true;
+        }
+        var _a = this.current.getPositionIndex(), x = _a[0], y = _a[1];
+        var rows = this.cells.rows + this.current.bottomSpace;
+        if (y >= rows) {
+            return false;
+        }
+        return !this.cells.hasOver(this.current, x, y - 3);
     };
     GameScene.prototype.passLevel = function () {
         this.nextLevel();
     };
     GameScene.prototype.nextLevel = function () {
         this.level++;
-        this.amount = Math.max(1, 9 + Math.floor(this.level / 10 - 1));
-        this.rotationSpeed = this.level % 3 === 0 && Math.random() < 0.1 ? this.rotationSpeed * -1 : this.rotationSpeed;
-        for (var _i = 0, _a = this.targetBooms; _i < _a.length; _i++) {
-            var item = _a[_i];
-            this.targetBox.removeChild(item.boom);
-        }
-        this.targetBooms = [];
-        var random = Math.floor(Math.random() * this.level);
-        if (random >= this.level / 2) {
-            this.amount -= Math.floor(Math.random() * this.level / 2 + 1);
-        }
-        for (var i = 1; i < random; i++) {
-            var r = Math.floor(Math.random() * 180);
-            r = Math.random() < .5 ? r * -1 : r;
-            this.trigger(EVENT_BOOM_HIT, r);
-        }
-        this.trigger(EVENT_BOOM_RESET);
+        this.speed += 1;
+        this.cells.reset();
+        this.trigger(EVENT_FIXED);
     };
-    GameScene.prototype.shoot = function () {
+    GameScene.prototype.createNext = function () {
         var _this = this;
-        if (this.isShooting || this.amount < 1) {
-            return;
-        }
-        this.isShooting = true;
-        this.amount--;
-        createjs.Tween.get(this.boom)
-            .to({
-            y: 350
-        }, 150, createjs.Ease.cubicIn)
-            .call(function () {
-            var rotation = _this.targetBox.rotation % 360;
-            if (rotation < 0) {
-                rotation = 360 + rotation;
-            }
-            if (_this.hasBoom(rotation)) {
-                _this.flickBoom();
-                return;
-            }
-            _this.woodBits();
-            var x = _this.targetBox.x;
-            var y = _this.targetBox.y;
-            createjs.Tween.get(_this.targetBox)
-                .to({ x: x - 6, y: y - 7 }, 20, createjs.Ease.bounceInOut)
-                .to({ x: x, y: y }, 20, createjs.Ease.bounceInOut)
-                .call(function () {
-                if (_this.amount < 1) {
-                    _this.passLevel();
-                    return;
-                }
-                _this.trigger(EVENT_BOOM_RESET);
-            });
-            _this.boom.alpha = 0;
-            _this.trigger(EVENT_BOOM_HIT, rotation);
-            _this.score++;
+        var bg = new createjs.Shape(new createjs.Graphics().beginFill('gray').drawRect(0, 0, 120, 120));
+        var cell = new MiniMap(Utils.random(6), Utils.random(3));
+        this.nextBox = new createjs.Container();
+        this.nextBox.addChild(bg, cell);
+        this.nextBox.y = 300;
+        this.nextBox.x = 500;
+        this.addChild(this.nextBox);
+        this.on(EVENT_NEXT, function () {
+            _this.current.copy(cell);
+            var min = 0 - _this.current.leftSpace, max = 10 + _this.current.rightSpace;
+            var y = _this.current.bottomSpace;
+            _this.current.setPositionIndex(Utils.random(min, max), y);
+            cell.generateCells(Utils.random(6), Utils.random(3));
         });
     };
-    GameScene.prototype.flickBoom = function () {
+    GameScene.prototype.createBox = function () {
         var _this = this;
-        createjs.Tween.get(this.boom)
-            .to({ x: Configs.width + 100, y: Configs.height + 100, rotation: 720 }, 700, createjs.Ease.bounceOut)
-            .call(function () {
-            _this.navigate(new EndScene(), _this.score);
-        });
-    };
-    GameScene.prototype.hasBoom = function (rotation) {
-        for (var _i = 0, _a = this.targetBooms; _i < _a.length; _i++) {
-            var item = _a[_i];
-            var diff = Math.abs(rotation - item.rotation);
-            if (diff < 10 || diff > 350) {
-                return true;
-            }
-        }
-        return false;
-    };
-    GameScene.prototype.woodBits = function () {
-        var _this = this;
-        var img = Resources.getImage(BITS_OF_WOOD_IMG);
-        var bit = new createjs.Shape(new createjs.Graphics().beginBitmapFill(img).drawRect(0, 0, img.width, img.height));
-        var scale = 5 / img.width;
-        bit.scaleX = bit.scaleY = scale;
-        var maxWidth = Configs.width;
-        var maxHeight = Configs.height;
-        bit.x = maxWidth / 2 - 1;
-        bit.y = 250;
-        var _loop_1 = function (i) {
-            var bitNew = bit.clone();
-            this_1.addChild(bitNew);
-            var random = Math.floor(Math.random() * maxWidth * 2);
-            random = Math.random() < .5 ? random * -1 : random;
-            createjs.Tween.get(bitNew)
-                .to({ x: random, y: maxHeight }, 500, createjs.Ease.sineOut)
-                .call(function () {
-                _this.removeChild(bitNew);
-            });
-        };
-        var this_1 = this;
-        for (var i = 0; i < 4; i++) {
-            _loop_1(i);
-        }
-    };
-    GameScene.prototype.createTarget = function () {
-        var _this = this;
-        var bgImg = Resources.getImage(TARGET_IMG);
-        var img = Resources.getImage(BOOMERANG_IMG);
-        var bg = new createjs.Shape(new createjs.Graphics().beginBitmapFill(bgImg).drawRect(0, 0, bgImg.width, bgImg.height));
-        var height = 200, scale = height / bgImg.height;
-        var boomOut = 50;
-        bg.y = bg.x = boomOut;
-        bg.scaleX = bg.scaleY = scale;
-        this.targetBox = new createjs.Container();
-        this.targetBox.addChild(bg);
-        this.targetBox.y = 250;
-        this.targetBox.regX = 150;
-        this.targetBox.regY = 150;
-        this.targetBox.x = Configs.width / 2;
-        this.addChild(this.targetBox);
-        this.targetBox.setChildIndex(bg, 100);
-        var boomHeight = 100, boomScale = boomHeight / img.height;
-        var minWidth = boomScale * img.width;
-        var boom = new createjs.Shape(new createjs.Graphics().beginBitmapFill(img).drawRect(0, 0, img.width, img.height));
-        boom.scaleX = boom.scaleY = boomScale;
-        boom.regY = 0;
-        boom.regX = minWidth + 5;
-        boom.y = 200;
-        boom.x = 150;
-        this.on(EVENT_BOOM_HIT, function (rotation) {
-            var boomNew = boom.clone();
-            var deg = -rotation * Math.PI / 180;
-            boomNew.x = 150 - 50 * Math.sin(deg);
-            boomNew.y = 150 + 50 * Math.cos(deg);
-            boomNew.rotation = -rotation;
-            _this.targetBox.addChild(boomNew);
-            _this.targetBooms.push({ boom: boomNew, rotation: rotation });
-            _this.targetBox.setChildIndex(boomNew, 0);
-        });
-    };
-    GameScene.prototype.createBoom = function () {
-        var _this = this;
-        var img = Resources.getImage(BOOMERANG_IMG);
-        this.boom = new createjs.Shape(new createjs.Graphics().beginBitmapFill(img).drawRect(0, 0, img.width, img.height));
-        var height = 100, scale = height / img.height;
-        this.boom.scaleY = this.boom.scaleX = scale;
-        var x = (Configs.width - img.width * scale) / 2;
-        var y = Configs.height - 100 - height;
-        this.boom.x = x;
-        this.boom.y = y;
-        this.addChild(this.boom);
-        this.boom.addEventListener('click', this.shoot.bind(this));
-        this.on(EVENT_BOOM_RESET, function () {
-            _this.boom.x = x;
-            _this.boom.y = y;
-            _this.boom.rotation = 0;
-            _this.boom.alpha = 1;
-            _this.isShooting = false;
+        var bg = new createjs.Shape(new createjs.Graphics().beginFill('gray').drawRect(0, 0, 420, 600));
+        this.current = new MiniMap(-1, 0);
+        this.cells = new MapShape(20, 14);
+        bg.y = this.cells.y = 120;
+        this.mainBox = new createjs.Container();
+        this.mainBox.addChild(bg, this.current, this.cells);
+        this.mainBox.y = 0;
+        this.mainBox.x = 50;
+        this.addChild(this.mainBox);
+        var mask = new createjs.Shape(new createjs.Graphics().beginFill("#ffffff").drawRect(this.mainBox.x, this.mainBox.y + 120, 420, 600));
+        this.mainBox.mask = mask;
+        this.on(EVENT_FIXED, function () {
+            var _a = _this.current.getPositionIndex(), x = _a[0], y = _a[1];
+            _this.cells.copyCell(_this.current, x, y - 4);
         });
     };
     GameScene.prototype.createScore = function () {
@@ -434,7 +839,7 @@ var GameScene = (function (_super) {
         this.scoreBox = new createjs.Container();
         this.scoreBox.addChild(bg, text, score);
         this.scoreBox.y = 20;
-        this.scoreBox.x = Configs.width / 2 - 40;
+        this.scoreBox.x = this.width / 2 - 40;
         this.addChild(this.scoreBox);
         this.on(EVENT_SCORE, function () {
             score.text = _this.score.toString();
@@ -456,47 +861,8 @@ var GameScene = (function (_super) {
             text.text = label();
         });
     };
-    GameScene.prototype.createAmount = function () {
-        var _this = this;
-        var label = function () { return 'x' + _this.amount; };
-        var text = new createjs.Text(label(), "20px Arial", "#000");
-        var img = Resources.getImage(BOOMERANG_IMG);
-        var boom = new createjs.Shape(new createjs.Graphics().beginBitmapFill(img).drawRect(0, 0, img.width, img.height));
-        var height = 50, scale = height / img.height;
-        boom.scaleY = boom.scaleX = scale;
-        text.x = img.width * scale + 10;
-        text.y = height / 2 - 5;
-        this.amountBox = new createjs.Container();
-        this.amountBox.addChild(text, boom);
-        this.amountBox.x = 20;
-        this.amountBox.y = Configs.height - 100 - height;
-        this.addChild(this.amountBox);
-        this.on(EVENT_AMOUNT, function () {
-            text.text = label();
-        });
-    };
     GameScene.prototype.close = function () {
-        this.events = [];
-        this.boom.removeAllEventListeners();
         _super.prototype.close.call(this);
-    };
-    GameScene.prototype.on = function (event, callback) {
-        this.events[event] = callback;
-        return this;
-    };
-    GameScene.prototype.hasEvent = function (event) {
-        return this.events.hasOwnProperty(event);
-    };
-    GameScene.prototype.trigger = function (event) {
-        var _a;
-        var args = [];
-        for (var _i = 1; _i < arguments.length; _i++) {
-            args[_i - 1] = arguments[_i];
-        }
-        if (!this.hasEvent(event)) {
-            return;
-        }
-        return (_a = this.events[event]).call.apply(_a, __spreadArrays([this], args));
     };
     return GameScene;
 }(Scene));
@@ -523,6 +889,10 @@ var LoadScene = (function (_super) {
         this._rect.graphics.beginFill('#ff0000').drawRect(0, 0, this._index * 10, 30);
     };
     LoadScene.prototype._images = function () {
+        if (Configs.resources.length < 1) {
+            this._complete();
+            return;
+        }
         this._loader = new createjs.LoadQueue(true);
         this._loader.addEventListener('complete', this._complete.bind(this));
         this._loader.addEventListener('fileload', this._fileLoad.bind(this));
@@ -553,11 +923,15 @@ var MainScene = (function (_super) {
     };
     MainScene.prototype._drawBtn = function () {
         var btn = new createjs.Text('START GAME', 'bold 30px Courier New', '#000');
-        btn.x = (Configs.width - 30) / 2;
-        btn.y = (Configs.height - 60) / 2;
+        btn.x = (this.width - 30) / 2;
+        btn.y = (this.height - 60) / 2;
         btn.textAlign = 'center';
         btn.addEventListener('click', this._click.bind(this));
         this.addChild(btn);
+        this.on(EVENT_RESIZE, function (width, height) {
+            btn.x = (width - 30) / 2;
+            btn.y = (height - 60) / 2;
+        });
     };
     MainScene.prototype._click = function () {
         this.navigate(new GameScene());
@@ -567,13 +941,7 @@ var MainScene = (function (_super) {
 var Configs = (function () {
     function Configs() {
     }
-    Configs.resources = [
-        { src: 'img/bits.png', id: BITS_OF_WOOD_IMG },
-        { src: 'img/boomerang.png', id: BOOMERANG_IMG },
-        { src: 'img/target.png', id: TARGET_IMG }
-    ];
-    Configs.width = window.innerWidth;
-    Configs.height = window.innerHeight;
+    Configs.resources = [];
     return Configs;
 }());
 var App = (function () {
@@ -581,9 +949,13 @@ var App = (function () {
     }
     App.main = function (arg) {
         var app = new Program(arg);
+        var setSize = function () {
+            app.setSize(window.innerWidth, window.innerHeight);
+        };
         app.setTouch();
-        app.setSize(Configs.width, Configs.height);
+        setSize();
         app.init();
+        window.onresize = setSize;
         return app;
     };
     return App;
@@ -592,6 +964,27 @@ var Program = (function () {
     function Program(arg) {
         this.stage = new createjs.Stage(arg);
     }
+    Object.defineProperty(Program.prototype, "width", {
+        get: function () {
+            return this.stage.canvas.width;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Program.prototype, "height", {
+        get: function () {
+            return this.stage.canvas.height;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(Program.prototype, "size", {
+        get: function () {
+            return { width: this.width, height: this.height };
+        },
+        enumerable: true,
+        configurable: true
+    });
     Program.prototype.setTouch = function () {
         createjs.Touch.enable(this.stage);
     };
@@ -601,6 +994,10 @@ var Program = (function () {
     Program.prototype.setSize = function (width, height) {
         this.stage.canvas.width = width;
         this.stage.canvas.height = height;
+        if (this.scene) {
+            this.scene.resize();
+            this.scene.trigger(EVENT_RESIZE, width, height);
+        }
     };
     Program.prototype.init = function () {
         this.navigate(new LoadScene());
@@ -614,8 +1011,8 @@ var Program = (function () {
         if (before) {
             before.close();
         }
-        page.setStage.apply(page, __spreadArrays([this], param));
         this.scene = page;
+        page.setStage.apply(page, __spreadArrays([this], param));
         page.navigated.apply(page, __spreadArrays([before], param));
         return this;
     };

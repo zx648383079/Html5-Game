@@ -1,3 +1,8 @@
+interface ISize {
+    width: number,
+    height: number
+}
+
 class Program {
     private stage: createjs.Stage;
     private scene!: Scene;
@@ -5,6 +10,22 @@ class Program {
     constructor(arg: string | HTMLCanvasElement) {
         this.stage = new createjs.Stage(arg);
     }
+
+    
+    public get width() : number {
+        return (<HTMLCanvasElement>this.stage.canvas).width;
+    }
+    
+    
+    public get height() : number {
+        return (<HTMLCanvasElement>this.stage.canvas).height;
+    }
+    
+    
+    public get size() : ISize {
+        return {width: this.width, height: this.height};
+    }
+    
     
     public setTouch(): void {
         createjs.Touch.enable(this.stage);
@@ -24,6 +45,10 @@ class Program {
     public setSize(width: number, height: number): void {
         (<HTMLCanvasElement>this.stage.canvas).width = width;
         (<HTMLCanvasElement>this.stage.canvas).height = height;
+        if (this.scene) {
+            this.scene.resize();
+            this.scene.trigger(EVENT_RESIZE, width, height);
+        }
     }
     
     public init(): void {
@@ -41,8 +66,8 @@ class Program {
         if (before) {
             before.close();
         }
-        page.setStage(this, ...param);
         this.scene = page;
+        page.setStage(this, ...param);
 		page.navigated(before, ...param);
 		return this;
     }

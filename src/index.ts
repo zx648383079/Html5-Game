@@ -1,9 +1,13 @@
 class App {
 	public static main(arg: string | HTMLCanvasElement): Program {
 		const app = new Program(arg);
+		const setSize = () => {
+			app.setSize(window.innerWidth, window.innerHeight);
+		};
 		app.setTouch();
-		app.setSize(Configs.width, Configs.height);
+		setSize();
 		app.init();
+		window.onresize = setSize;
 		return app;
-	} 
+	}
 }

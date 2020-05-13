@@ -24,6 +24,10 @@ class LoadScene extends Scene {
     }
     
     private _images(): void {
+        if (Configs.resources.length < 1) {
+            this._complete();
+            return;
+        }
         this._loader = new createjs.LoadQueue(true);
         this._loader.addEventListener('complete' , this._complete.bind(this));
         this._loader.addEventListener('fileload', this._fileLoad.bind(this));
@@ -40,7 +44,6 @@ class LoadScene extends Scene {
             const image = Configs.resources[i];
             Resources.setImage(image.id , this._loader.getResult(image.id) );
         }
-        
         this.navigate(new MainScene());
     }
 }

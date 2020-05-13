@@ -1,32 +1,21 @@
 /**
- * 木屑
+ * 浏览器可视尺寸变化
  */
-const BITS_OF_WOOD_IMG = 'bits';
-/**
- * 飞镖
- */
-const BOOMERANG_IMG = 'boomerang';
-/**
- * 靶子
- */
-const TARGET_IMG = 'target';
+const EVENT_RESIZE = 'resize';
+
 /**
  * 关卡更新事件
  */
 const EVENT_LEVEL = 'level';
 /**
- * 飞镖数量更新事件
- */
-const EVENT_AMOUNT = 'amount';
-/**
  * 得分更新事件
  */
 const EVENT_SCORE = 'score';
 /**
- * 飞镖击中事件
+ * 切换到下一个
  */
-const EVENT_BOOM_HIT = 'boom.hit';
+const EVENT_NEXT = 'next';
 /**
- * 飞镖位置重置事件
+ * 固定，转移
  */
-const EVENT_BOOM_RESET = 'boom.reset';
+const EVENT_FIXED = 'fixed';
