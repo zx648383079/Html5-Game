@@ -1,7 +1,7 @@
 class Size {
     constructor(
-        public width?: number,
-        public height?: number
+        public width: number = 0,
+        public height: number = 0
     ){
     }
 }

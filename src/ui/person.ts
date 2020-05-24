@@ -22,6 +22,14 @@ class Person extends createjs.Sprite {
     get size(): Size {
         return this._size;
     }
+
+    get height(): number {
+        return this.size.height || 0;
+    }
+
+    get width(): number {
+        return this.size.width || 0;
+    }
     
     public setBound(x: number | Point, y: number | Size, width?: number | Size, height?: number) {
         if(x instanceof Point) {
@@ -42,7 +50,21 @@ class Person extends createjs.Sprite {
     }
     
     public getBound(): Bound {
-        return new Bound( this.x, this.y, this.size.width, this.size.height);
+        return new Bound(this.x, this.y, this.size.width, this.size.height);
+    }
+
+    /**
+     * 去除一些边
+     * @param x 
+     * @param y 
+     */
+    public getRealBound(x: number = this.x, y: number = this.y): Bound {
+        return new Bound(x + 15, y, this.size.width - 30, this.size.height);
+    }
+
+    public setRealPoint(x: number, y: number) {
+        this.x = x - 15;
+        this.y = y;
     }
     
     public speed: number = 2;
@@ -79,6 +101,14 @@ class Person extends createjs.Sprite {
             this.isSuspeed = true;
         }
     }
+
+    public get rightOffest(): number {
+        return this.x + this.size.width;
+    }
+
+    public get bottomOffest(): number {
+        return this.y + this.size.height;
+    }
     
     public canDown: boolean = true;
     
@@ -90,17 +120,17 @@ class Person extends createjs.Sprite {
     
     public move() {
         if(this._lift > 0) {
-            this.animation("jump");
+            this.animation('jump');
             this.y -= this.gravity;
             this._lift -= this.gravity;
             if(this._lift <= 0) {
                 this._lift = 0;
-                this.animation("stop");
+                this.animation('stop');
             }
         }
         if(this._energy > 0) {
-            if(this.currentAnimation == "stop") {
-                this.animation("run");
+            if(this.currentAnimation == 'stop') {
+                this.animation('run');
             }
             this.x += this.speed;
             this._energy -= this.speed;
@@ -116,13 +146,12 @@ class Person extends createjs.Sprite {
         }
         
         if(this._energy == 0 && !this.canDown ) {
-            this.animation("stop");
+            this.animation('stop');
         } 
         
         if(this.canDown && this._lift == 0) {
             this.y += this.gravity;
         }
         this.canDown = true;
-        
     }
 }

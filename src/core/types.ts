@@ -1,32 +1,44 @@
 /**
- * 木屑
+ * 主角
  */
-const BITS_OF_WOOD_IMG = 'bits';
+const MAN_IMG = 'man';
 /**
- * 飞镖
+ * 矮石头
  */
-const BOOMERANG_IMG = 'boomerang';
+const LOW_STONE_IMG = 'low';
 /**
- * 靶子
+ * 高石头
  */
-const TARGET_IMG = 'target';
+const HIGHT_STONE_IMG = 'hight';
+/**
+ * 背景
+ */
+const BG_IMG = 'bg';
+/**
+ * 金币
+ */
+const COIN_IMG = 'coin';
 /**
  * 关卡更新事件
  */
 const EVENT_LEVEL = 'level';
 /**
- * 飞镖数量更新事件
- */
-const EVENT_AMOUNT = 'amount';
-/**
  * 得分更新事件
  */
 const EVENT_SCORE = 'score';
+
+const EVENT_BG_MOVE = 'bg.move';
+
 /**
- * 飞镖击中事件
+ * 窗口尺寸变化
  */
-const EVENT_BOOM_HIT = 'boom.hit';
+const EVENT_RESIZE = 'window.resize';
 /**
- * 飞镖位置重置事件
+ * 进度更新事件
  */
-const EVENT_BOOM_RESET = 'boom.reset';
+const EVENT_PROGRESS = 'progress';
+
+/**
+ * 场景关闭
+ */
+const EVENT_SCENE_CLOSE = 'scene.close';

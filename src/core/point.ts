@@ -16,13 +16,13 @@ class Point {
     
     public setWorld(x: number, y:number): void {
         this.x = x;
-        this.y = Configs.height - y;
+        this.y = y;
     }
     
     public getWorld(): any {
         return {
             x: this.x,
-            y: Configs.height - this.y
+            y: this.y
         };
     }
 }

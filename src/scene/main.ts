@@ -7,8 +7,8 @@ class MainScene extends Scene {
     
     private _drawBtn(): void {
         const btn = new createjs.Text('START GAME', 'bold 30px Courier New',  '#000');
-        btn.x = (Configs.width - 30) / 2 ;
-        btn.y = (Configs.height - 60) / 2;
+        btn.x = (this.width - 30) / 2 ;
+        btn.y = (this.height - 60) / 2;
         btn.textAlign = 'center';
         btn.addEventListener('click', this._click.bind(this));
         this.addChild(btn);

@@ -1,6 +1,9 @@
 abstract class Scene {
     protected stage!: createjs.Stage;
     protected application!: Program;
+
+    protected eventDispatcher: createjs.EventDispatcher = new createjs.EventDispatcher();
+    private keyListener: any[] = [];
     
     constructor(stage?: createjs.Stage | Program, ...arg: any[]) {
         if (stage == undefined ) {
@@ -8,6 +11,20 @@ abstract class Scene {
         }
         this.setStage(stage);
         this.init(...arg);	
+    }
+
+    public get width() : number {
+        return (<HTMLCanvasElement>this.stage.canvas).width;
+    }
+    
+    
+    public get height() : number {
+        return (<HTMLCanvasElement>this.stage.canvas).height;
+    }
+    
+    
+    public get size() : ISize {
+        return {width: this.width, height: this.height};
     }
     
     protected init(..._arg: any[]): void {
@@ -29,7 +46,7 @@ abstract class Scene {
     
     public setStage(arg: createjs.Stage  | Program, ...param: any[]): void {
         if (arg instanceof Program) {
-            this.stage = arg.getStage();
+            this.application = arg;
         }
         this.stage = arg instanceof Program ? arg.getStage() : arg;
         this.init(...param);
@@ -43,11 +60,13 @@ abstract class Scene {
     protected addEvent(name: string, func: (eventObj: Object) => void ): void {
         this.stage.addEventListener(name, func);
     }
+
     /**
      * 添加键盘输入
      * @param func 
      */
-    protected addKeyEvent(func: (eventObj: Object) => any): any {
+    protected addKeyEvent(func: (eventObj: KeyboardEvent) => any): any {
+        this.keyListener.push(func);
         return window.addEventListener('keydown', func);
     }
     
@@ -75,13 +94,25 @@ abstract class Scene {
         mode: string = createjs.Ticker.RAF_SYNCHED): void {
         createjs.Ticker.timingMode = mode;
         createjs.Ticker.framerate = fps;
-        createjs.Ticker.addEventListener('tick', this.update.bind(this));
+        const func = this.update.bind(this);
+        createjs.Ticker.addEventListener('tick', func);
+        this.on(EVENT_SCENE_CLOSE, () => {
+            createjs.Ticker.removeEventListener('tick', func);
+        });
     }
+
     /**
      * 更新
      */
     public update(): void {
         this.stage.update();
+    }
+
+    /**
+     * 尺寸变化
+     */
+    public resize(): void {
+        this.update();
     }
     
     /**
@@ -90,7 +121,12 @@ abstract class Scene {
     public close(): void {
         // createjs.Ticker.reset();
         // createjs.Tween._inited = undefined;
+        // this.trigger(EVENT_SCENE_CLOSE);
+        this.eventDispatcher.removeAllEventListeners();
         this.stage.removeAllChildren();
+        this.keyListener.forEach(item => {
+            window.removeEventListener('keydown', item);
+        });
     }
     /**
      * 跳转到场景
@@ -104,5 +140,21 @@ abstract class Scene {
         }
         this.close();
         arg.setStage(this.stage, ...param);
+    }
+
+    public on(event: string, callback: Function): this {
+        this.eventDispatcher.addEventListener(event, obj => {
+            callback.call(this, ...(obj as createjs.Event).data);
+        });
+        return this;
+    }
+
+    public trigger(event: string, ...args: any[]) {
+        if (this.eventDispatcher.hasEventListener(event)) {
+            const eventObj = new createjs.Event(event, false, true);
+            eventObj.data = args;
+            this.eventDispatcher.dispatchEvent(eventObj);
+        }
+        return this;
     }
 }

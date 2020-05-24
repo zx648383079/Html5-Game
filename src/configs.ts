@@ -1,18 +1,11 @@
 class Configs {
     public static resources: any[] = [
-        {src:"img/man.png" , id:"man"},
-        {src:"img/ground.png" , id:"ground"},
-        {src:"img/bg.png" , id:"bg"},
-        {src:"img/high.jpg" , id:"high"},
-        {src:"img/coin.png" , id:"coin"},
-        {src:"img/game.json" , id:"model"}
+        {src: 'img/man.png' , id: MAN_IMG},
+        {src: 'img/ground.png' , id: LOW_STONE_IMG},
+        {src: 'img/bg.png' , id: BG_IMG},
+        {src: 'img/high.png' , id: HIGHT_STONE_IMG},
+        {src: 'img/coin.png' , id: COIN_IMG},
     ];
     
     public static sounds: Object[];
-    
-    public static width: number = window.innerWidth;
-    
-    public static height: number = window.innerHeight;
-    
-    public static stoneHeight: number = Math.floor(window.innerHeight / 4);	
 }

@@ -1,57 +1,75 @@
 class LoadScene extends Scene {
-    private _lable!: createjs.Text;
-    private _rect!: createjs.Shape;
-    private _index!: number;
-    private _loader!: createjs.LoadQueue;
     
     protected init(): void {
         super.init();
-        this._index = 0;
-        this._images();
+        this.createSchedule();
+        this.loadImages();
         this.setFPS(10);
     }
-    
-    private _setSchedule(num: number = 0): void {
-        if(this._lable === undefined) {
-            this._lable = new createjs.Text(num.toString(), 'bold 14px Courier New', '#000000');
-            this._lable.y = 10;
-            this._rect = new createjs.Shape(new createjs.Graphics().beginFill('#ffffff').drawRect(0, 0, 400, 30));
-            this.addChild( this._rect, this._lable );
-        }
-        
-        this._lable.text = this._index.toString();
-        this._rect.graphics.beginFill('#ff0000').drawRect(0, 0 , this._index * 10 , 30);
+    /**
+     * 进度显示
+     */
+    private createSchedule() {
+        const bar = new createjs.Container();
+        const outline = new createjs.Shape(new createjs.Graphics().beginFill('#cccccc').drawRect(0, 0, 300, 10));
+        const inline = new createjs.Shape();
+        const tip = new createjs.Text('0', 'bold 14px Courier New', '#333');
+        tip.textAlign = 'center';
+        tip.x = 150;
+        tip.y = 20;
+        bar.addChild(outline, inline, tip);
+        bar.x = this.width / 2 - 150;
+        bar.y = this.height * .8;
+        this.addChild(bar);
+        this.on(EVENT_PROGRESS, (progress: number, label: string) => {
+            inline.graphics.clear();
+            if (progress > 0) {
+                inline.graphics.beginFill('#0172d5').drawRect(0, 0, progress * 300, 10);
+            }
+            tip.text = label + ': ' + Math.floor(progress * 100) + '%';
+        });
     }
-    
-    private _images(): void {
-        this._loader = new createjs.LoadQueue(true);
-        this._loader.addEventListener('complete' , this._complete.bind(this));
-        this._loader.addEventListener('fileload', this._fileLoad.bind(this));
-        this._loader.loadManifest(Configs.resources);
-        this._loader.getResult()
+    /**
+     * 预载图片
+     */
+    private loadImages() {
+        const items = Configs.resources;
+        const preload = new createjs.LoadQueue(true);
+        preload.on('complete' , () => {
+            for (const item of items) {
+                Resources.setImage(item.id , preload.getResult(item.id));	
+            }
+            this.loadSounds();
+        });
+        preload.on('progress', (e: any) => {
+            this.trigger(EVENT_PROGRESS, e.progress, '加载图片');
+        });
+        preload.loadManifest(Configs.resources);
+        preload.getResult();
     }
 
-    private _sounds(): void {
-        createjs.Sound.alternateExtensions = ["mp3"];
-        var preload = new createjs.LoadQueue(true);
-        preload.installPlugin( createjs.Sound );
-        preload.loadManifest( Configs.sounds );
-    }
-    
-    private _fileLoad(): void {
-        this._setSchedule( this._index ++ );
-    }
-    
-    private _complete(): void {
-        for (var i = 0, len = Configs.resources.length; i < len; i++) {
-            var image = Configs.resources[i];
-            if(image.id == "model") {
-                Resources.models = <any[]>this._loader.getResult(image.id);
-            }else{
-                Resources.setImage( image.id , this._loader.getResult(image.id) );					
-            }
+    /**
+     * 预载音频
+     */
+    private loadSounds() {
+        if (!Configs.sounds || Configs.sounds.length < 1) {
+            this.complete();
+            return;
         }
-        
-        this.navigate(new MainScene());
+        createjs.Sound.alternateExtensions = ['mp3'];
+        const preload = new createjs.LoadQueue(true);
+        preload.installPlugin(createjs.Sound);
+        preload.on('complete' , () => {
+            this.complete();
+        });
+        preload.on('progress', (e: any) => {
+            this.trigger(EVENT_PROGRESS, e.progress, '加载音频');
+        });
+        preload.loadManifest(Configs.sounds);
+        preload.getResult();
+    }
+
+    private complete() {
+        this.navigate(new MainScene);
     }
 }

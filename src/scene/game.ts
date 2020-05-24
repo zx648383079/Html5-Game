@@ -1,200 +1,347 @@
 class GameScene extends Scene {
 
-    private _shap!: Person;
+    private _man!: Person;
     
-    private _score!: createjs.Text;										//记录分数
+    private _score: number = 0;										//记录分数
     
-    private _stones!: Shape[];                             				//台阶数组
+    private _wall!: Wall;                             				//台阶数组
     
     private _coins!: Coin[];       										//金币数组
     
-    private _index!: number;        										//下一个台阶的数据
+    private _level: number = 1;
     
-    private _count: number = Math.ceil(Configs.width / 80) + 1;         //一屏台阶的数目
-    
-    private _distance!: number;
+    /**
+     * 当前已跑了多远
+     */
+    private _distance: number = 0;
 
-    private events: any = {};
+    private _coinTime = 0;
+
+    /**
+     * 是否处于跳跃中，处于几段跳
+     */
+    private _jumping = 0;
+
+    private _vy = -12; // 垂直方向的速度，负代表向上
+    private _gravity = .5; // 重力加速度
+    private _hx = 0; // 加速度
+    private _resistance = .3; // 阻力
+    /**
+     * 当前运动速度
+     */
+    private _speed: number = 1;
+    
+    public get stoneHeight() : number {
+        return Math.floor(this.height / 4)
+    }
+
+    public set score(arg: number) {
+        this._score = arg;
+        this.trigger(EVENT_SCORE, arg);
+        this.level = Math.ceil(arg / 200);
+    }
+
+    
+    public get score(): number {
+        return this._score;
+    }
+
+    
+    public get level() : number {
+        return this._level;
+    }
+
+    
+    public set level(v : number) {
+        this._level = v;
+        this.trigger(EVENT_LEVEL, v);
+        this._wall.level = v;
+        this._speed = Math.ceil(this.level / 10);
+    }
+    
     
     public init(): void {
         super.init();
-        this._stones = new Array();	
-        this._coins = new Array();
-        this._index = 0;
+        this._coins = [];
         this._distance = 0;
         
         this._drawSky();
-        this._drawShip();
+        this._drawWall();
         this._drawScore();
-        
-        for (var i = 0; i < this._count ; i++) {
-            this._draw();
-        }
-        
-        this.setFPS(30);
+        this._drawMan();
+        this.setFPS();
         this.addKeyEvent(this._keyDown.bind(this));
     }
     
     private _drawScore(): void {
-        this._score = new createjs.Text( (0).toString() , 'bold 30px Courier New', '#ff0000');
-        this._score.y = 50;
-        this._score.x = 100
-        this.addChild(this._score);
+        const box = new createjs.Text('', 'bold 30px Courier New', '#ff0000');
+        box.y = 20;
+        box.x = this.width - 100;
+        box.textAlign = 'center';
+        this.addChild(box);
+        this.on(EVENT_SCORE, () => {
+            box.text = this._score.toString();
+        });
     }
     
-    private _draw() {
-        var x = this._index * 80 - this._distance;
-        switch (Resources.models[0][this._index]) {
-            case 3:
-                this._drawCoin( new Point( x + 15,  Configs.stoneHeight + 100 ) );
-            case 0:
+    private _keyDown(event: KeyboardEvent): void{
+        event.preventDefault();
+        switch (event.key) {
+            case 'D':
+            case 'd':
+            case 'ArrowRight':
+                this.runRightMan();
                 break;
-            case 4:
-                this._drawCoin(new Point( x + 15, Configs.stoneHeight + 100 ) );
-            case 1:
-                this._drawStone( new Point( x , Configs.stoneHeight ) );
-                break;
-            case 5:
-                this._drawCoin(new Point( x + 15, Configs.stoneHeight + 150 ) );
-            case 2:
-                this._drawStone( new Point( x , Configs.stoneHeight + 50 ), Resources.getImage( "high" ) );
-                break;
-            default:
-                break;
-        }
-        this._index ++ ;
-    }
-    
-    private _keyDown(event: any): void{
-        switch (event.keyCode) {
-            case 39:
-                this._shap.animation("run");
-                this._shap.energy = 60;
-                break;
-            case 32:
-                this._shap.animation("jump");
-                this._shap.lift = 50;
+            case 'A':
+            case 'a':
+            case 'ArrowLeft':
+                    this.runLeftMan();
+                    break;
+            case ' ':
+                this.dumpMan();
                 break;
             default:
                 break;
         }
     }
+
+    private runLeftMan() {
+        this._man.animation('run');
+        this._hx = -5;
+        // if (this._jumping > 0) {
+        //     this._vy = 3;
+        // }
+    }
+
+    private runRightMan() {
+        this._man.animation('run');
+        this._hx = 5;
+        // if (this._jumping > 0) {
+        //     this._vy = 3;
+        // }
+    }
+
+    private dumpMan() {
+        if (this._jumping > 1) {
+            return;
+        }
+        this._jumping ++;
+        this._man.animation('jump');
+        this._vy = -12;
+    }
+
+    private _drawWall() {
+        this._wall = new Wall();
+        this._wall.init(this.width, this.height);
+        this.addChild(this._wall);
+    }
     
-    private _drawSky(arg: HTMLImageElement = Resources.getImage("bg")): void {
-        var sky = new createjs.Shape();
-        sky.graphics.beginBitmapFill( arg ).drawRect(0, 0, arg.width, arg.height);
-        sky.setTransform(0, 0, Configs.width / arg.width , Configs.height / arg.height);
+    private _drawSky(arg: HTMLImageElement = Resources.getImage(BG_IMG)): void {
+        const sky = new createjs.Shape();
+        sky.graphics.beginBitmapFill(arg);
+        const scale = this.height / arg.height;
+        const width = scale * arg.width;
+        const count = Math.ceil(width / this.width) + 1;
+        for (let i = count - 1; i >= 0; i--) {
+            sky.graphics.drawRect(i * arg.width, 0, arg.width, arg.height);
+        }
+        sky.scaleX = sky.scaleY = scale;
         this.addChild(sky);
+        this.on(EVENT_BG_MOVE, (diff: number) => {
+            sky.x -= diff;
+            if (sky.x < -width) {
+                sky.x += width;
+            }
+        });
     }
     
-    private _drawShip(): void {
-        var manSpriteSheet = new createjs.SpriteSheet({
-            "images": [ Resources.getImage("man") ],
-            "frames": {"regX": 0, "height": 64, "count": 66,"regY": 1, "width": 64},
-            "animations": {
-                "stop": {
+    private _drawMan(): void {
+        const manSpriteSheet = new createjs.SpriteSheet({
+            'images': [ Resources.getImage(MAN_IMG) ],
+            'frames': {'regX': 0, 'height': 64, 'count': 66,'regY': 1, 'width': 64},
+            'animations': {
+                'stop': {
                     frames: [65],
-                    next: "stop",
+                    next: 'stop',
                     speed: 0.2,
                 },
-                "run": {
+                'run': {
                     frames: [ 21, 20, 19, 18, 17, 16, 15, 14, 13, 12 ],
-                    next: "run",
-                    speed: 0.4,
+                    next: 'run',
+                    speed: 0.2,
                 }, 
-                "jump": {
+                'jump': {
                     frames: [ 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43 ],
-                    next: "stop",
-                    speed: 0.1,
+                    next: 'stop',
+                    speed: 0.2,
                 },
-                "die": {
+                'die': {
                     frames: [8, 7, 6, 5, 4, 3, 2, 1, 0 ],
-                    next: "die",
+                    next: 'die',
                     speed: 0.3,
                 }
             }
         });
-        this._shap = new Person(manSpriteSheet , "run");
-        this._shap.framerate = 13;
-        this._shap.setBound( 0, Configs.height , 64, 64);
-        this._shap.energy = 100;			
+        this._man = new Person(manSpriteSheet , 'stop');
+        this._man.framerate = 13;
+        const point = this._wall.getSpacePoint(200);
+        this._man.setBound(point.x, 0, 64, 62);
+        this._vy = 0;			
         //this._shap.setTransform( 60, 60, 1.5, 1.5);
-        this.addChild(this._shap);
+        this.addChild(this._man);
     }
     
-    private _drawCoin(point: Point, arg: HTMLImageElement = Resources.getImage("coin")): void {
-        var coin = new Coin();
-        coin.graphics.beginBitmapFill( arg ).drawRect(0, 0, 50 , 50);
-        coin.setBound( point , 50 , 50 );
+    private _drawCoin(point: Point, arg: HTMLImageElement = Resources.getImage(COIN_IMG)): void {
+        const coin = new Coin();
+        coin.graphics.beginBitmapFill(arg).drawRect(0, 0, arg.width, arg.height);
+        point.y -= arg.height;
+        point.x += (this._wall.stoneWidth - arg.width) / 2;
+        coin.setBound(point, arg.width, arg.height);
         this.addChild(coin);
         this._coins.push(coin);		
     }
-    
-    private _drawStone(point: Point, arg: HTMLImageElement = Resources.getImage("ground")): void {
-        var stone = new Shape();
-        stone.graphics.beginBitmapFill( arg ).drawRect(0, 0, 80 , arg.height);
-        stone.setBound( point , 80 , point.y );
-        stone.scaleY = stone.point.y / arg.height;
-        this.addChild(stone);
-        this._stones.push(stone);		
+
+    private mapCoin(cb: (coin: Coin, i: number) => any) {
+        for (let i = this._coins.length - 1; i >= 0; i--) {
+            const res = cb(this._coins[i], i);
+            if (typeof res === 'undefined') {
+                continue;
+            }
+            if (typeof res === 'boolean' && !res) {
+                break;
+            }
+            if (typeof res === 'number' && res === -1) {
+                this.removeChild(this._coins[i]);
+                this._coins.splice(i, 1);
+            }
+        }
+    }
+
+    private moveCoin(diff: number) {
+        this.mapCoin(coin => {
+            if( coin.x + coin.getBound().width < 0) {
+                return -1;
+            }
+            coin.x -= diff;
+            if (this._collide(coin.getBall(), this._man.getRealBound())) {
+                this.score += 1;
+                return -1;
+            }
+        });
+    }
+
+    /**
+     * 随机生成金币
+     */
+    private generateCoin() {
+        this._coinTime -= 1;
+        if (this._coinTime > 0) {
+            return;
+        }
+        let x = this.width;
+        if (this._coins.length > 0) {
+            x = this._coins[this._coins.length - 1].rightOffest;
+            if (x > this.width) {
+                return;
+            }
+        }
+        const rnd = this._coinTime = Math.floor(Math.random() * 1000);
+        // if (rnd < 90) {
+        //     return;
+        // }
+        x = Math.max(x, this.width);
+        const point = this._wall.getCoinPoint(x);
+        if (rnd > 500) {
+            point.y -= 80;
+        }
+        this._drawCoin(point);
+    }
+
+    private moveMan(diff: number) {
+        const manBound = this._man.getRealBound();
+        let y = manBound.y;
+        if (this._jumping > 0) {
+            this._vy += this._gravity;
+            y += this._vy;
+        }
+        let x = manBound.x - diff;
+        
+        if (this._hx > 0) {
+            this._hx -= this._resistance;
+            x += this._hx;
+            if (this._hx <= 0) {
+                this._man.animation('stop');
+                this._hx = 0;
+            }
+        } else if (this._hx < 0) {
+            this._hx += this._resistance;
+            x += this._hx;
+            if (this._hx >= 0) {
+                this._man.animation('stop');
+                this._hx = 0;
+            }
+            const prev = this._wall.getStoneBound(x);
+            if (prev.x + prev.width >= x && prev.y < y + manBound.height) {
+                x = prev.x + prev.width;
+                this._man.animation('stop');
+                this._hx = 0;
+            }
+        }
+        const bound = this._wall.getStoneBound(x);
+        const next = this._wall.getStoneBound(x + manBound.width);
+        if (this._jumping > 0) {
+            // 下坠落地检测
+            if (y + manBound.height >= bound.y && bound.y < this.height) {
+                this._jumping = 0;
+                this._hx = 0;
+                this._man.animation('stop');
+                y = bound.y - manBound.height;
+            }
+            if (next.y < bound.y && y + manBound.height >= next.y) {
+                this._jumping = 0;
+                this._hx = 0;
+                this._man.animation('stop');
+                y = next.y - manBound.height;
+            }
+        } else {
+            // 下坠检测
+            if (y + manBound.height < bound.y) {
+                this._jumping = 2;
+                this._vy = 0;
+            }
+        }
+        // 撞墙检测
+        if (next.y < y + manBound.height) {
+            x = next.x - manBound.width;
+            this._man.animation('stop');
+        }
+        if (x + manBound.width >= this.width) {
+            x = this.width - manBound.width;
+            this._man.animation('stop');
+        }
+        this._man.setRealPoint(x, y);
+        if (x + manBound.width < 0
+            || y + manBound.height >= this.height - 10) {
+            this.navigate(new EndScene, this.score);
+            return;
+        }
+    }
+
+    /**
+     * 移动整张地图
+     * @param diff 
+     */
+    private moveMap(diff: number) {
+        this._distance += diff;
+        this.trigger(EVENT_BG_MOVE, diff);
+        this._wall.move(diff);
+        this.moveMan(diff);
+        this.moveCoin(diff);
+        this.generateCoin();
     }
     
     public update(): void {
-        const bound = this._shap.getBound();
-        let distance = 0 ;
-        if (this._shap.x - Configs.width / 2 > 0 && this._index <= Resources.models[0].length) {
-            distance = 2;
-        }
-        this._distance += distance;
-        bound.x += 20;
-        bound.width -= 40;
-        this._stones.forEach( (stone) => {
-            if(bound.x + bound.width == stone.x && stone.y < bound.y + bound.height - 1) {
-                this._shap.energy = 0;
-            }
-            var right = stone.x + stone.getBound().width;
-            if( ( (bound.x > stone.x && 
-                bound.x < right ) || 
-                (bound.x + bound.width > stone.x && 
-                bound.x + bound.width < right) ) && 
-                bound.y + bound.height >= stone.y ) {
-                this._shap.canDown = false;
-                this._shap.isSuspeed = false;
-            }
-            if(right <= 0) {
-                this.removeChild( this._stones.shift() );
-            }else {
-                stone.x -= distance;					
-            }
-        });
-        if( this._distance > 0 && this._distance % 80 == 0) {
-            this._draw();		
-        }
-        
-        this._coins.forEach( (coin, i) => {
-            if(coin.x <= 20 && coin.y <= 20) {
-                this._score.text = (parseInt(this._score.text) + 50 ).toString();
-                this.removeChild(coin);
-                this._coins.splice(i, 1);
-            }
-            if(this._ballCollideRect(coin.getBall() , bound )) {
-                coin.move();
-            }
-            if( coin.x + coin.getBound().width < 0) {
-                this.removeChild( coin );
-                this._coins.splice( i, 1 );
-            }else {
-                coin.x -= distance;
-            }
-        });
-        this._shap.x -= distance;
-        this._shap.move();
-                
-        super.update();
-        
-        if(this._shap.point.y <= 0 || this._shap.x >= Configs.width - 64) {
-            this.navigate( new EndScene(), this._score.text);
-        }
+        this.moveMap(this._speed);
     }
     /**
      * 矩形与圆的碰撞检测
@@ -255,24 +402,7 @@ class GameScene extends Scene {
     }
 
     public close(): void {
-        this.events = [];
         super.close();
-    }
-
-    public on(event: string, callback: Function): this {
-        this.events[event] = callback;
-        return this;
-    }
-
-    public hasEvent(event: string): boolean {
-        return this.events.hasOwnProperty(event);
-    }
-
-    public trigger(event: string, ... args: any[]) {
-        if (!this.hasEvent(event)) {
-            return;
-        }
-        return this.events[event].call(this, ...args);
     }
 }
 
